@@ -49,7 +49,7 @@ class Actions:
 		}
 		organteq_call(set_payload)
 
-	def organteq_set_stops(manual: str, stops: list[int], value: float):
+	def organteq_set_stops(manual: str, stops: list[str], value: float):
 		"""set a list of Organteq stops to a specific value (0.0 or 1.0)"""
 		global last_stops
 		last_stops[manual] = stops
@@ -76,7 +76,7 @@ class Actions:
 		except (json.JSONDecodeError, KeyError) as e:
 			print(f"Command failed with error: {e}")
 
-	def organteq_push_stops(manual: str, stops: list[int]):
+	def organteq_push_stops(manual: str, stops: list[str]):
 		"""turn an Organteq stop on (1.0)"""
 		actions.user.organteq_set_stops(manual, stops, 0.0)
 
@@ -84,7 +84,7 @@ class Actions:
 		"""turn an Organteq stop off (0.0)"""
 		actions.user.organteq_set_stops(manual, stops, 1.0)
 
-	def organteq_toggle_stops(manual: str, stops: list[int]):
+	def organteq_toggle_stops(manual: str, stops: list[str]):
 		"""toggle multiple Organteq stops on or off"""
 		global last_stops
 		last_stops[manual] = stops
@@ -104,7 +104,7 @@ class Actions:
 		for stop in stops:
 			actions.user.organteq_toggle_stop(manual, stop)
 	
-	def organteq_remember_stops(stops: list[int]):
+	def organteq_remember_stops(stops: list[str]):
 		"""remember stops for current manual"""
 		global remembered_stops
 		manual = actions.user.organteq_get_manual()
