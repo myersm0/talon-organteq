@@ -22,22 +22,22 @@ All manuals support up to 10 stops, except for the Great which can go up to 20.
 ## Commands
 The following are _voice commands_ that you issue (speak) while the Organteq app is focused.
 
-### Basic Stop Control
+### Basic stop control
 ```
 great one three twelve      # toggle stops 1, 3, and 12 on the Great
 swell two                   # toggle stop 2 on the Swell
 pedal four seven            # toggle Pedal stops 4 and 7
 ```
 
-### Manual Context
+### Manual context
 Set a current manual to avoid repeating the manual name:
 ```
 use great                   # set Great as current manual
 toggle one three twelve     # toggle stops 1, 3, 12 on current manual (Great)
-toggle two four             # toggle stops 2, 4 on (still on Great)
+toggle two four             # toggle stops 2, 4 (still on Great)
 ```
 
-### Memory Features
+### Memory features
 Each manual maintains separate memory for "last stops" and "remembered stops".
 ```
 use great
@@ -46,7 +46,7 @@ toggle                      # toggle the remembered stops
 toggle last                 # toggle whatever stops were just used
 ```
 
-### Clearing Stops
+### Clearing stops
 ```
 clear great                 # Turn off all stops on the Great
 clear swell                 # Turn off all stops on the Swell
