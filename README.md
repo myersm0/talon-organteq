@@ -1,5 +1,5 @@
 # talon-organteq
-Talon Voice commands for hands-free control of pipe organ registration (stops, couplers, etc) in Modartt's Organteq software instrument, by communicating with Organteq's built-in JSON-RPC server at `http://127.0.0.1:8081/jsonrpc`.
+[Talon](https://talonvoice.com/) voice commands for hands-free control of pipe organ registration (stops, couplers, etc) in Modartt's [Organteq 2](https://www.modartt.com/organteq_overview) software instrument, by communicating with its built-in JSON-RPC server at `http://127.0.0.1:8081/jsonrpc`.
 
 This repo doesn't aspire to provide full control of Organteq. Rather the focus is on just a small subset of commands that are particularly useful to be able to modify hands-free during play.
 
