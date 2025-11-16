@@ -27,7 +27,6 @@ You may additionally have a third problem of language and dialect, if you're not
 - Install [Talon Voice](https://talonvoice.com/)
 - Install [talon-community](https://github.com/talonhub/community)
 - Install Modartt's [Organteq 2](https://www.modartt.com/organteq_overview), and launch it with JSON-RPC server enabled
-  - on Mac, this can be launched from the terminal via `/Applications/Organteq\ 2/Organteq\ 2.app/Contents/MacOS/Organteq\ 2 --serve`
 - You must have `curl` available in your system PATH
 
 ### Installation
@@ -37,7 +36,12 @@ git clone https://github.com/myersm0/talon-organteq ~/.talon/user/
 ```
 
 ## Usage
-The following are _voice commands_ that you issue (speak) while the Organteq app is focused.
+First you will have to launch Organteq with JSON-RPC server enables. On a Mac this can be done from the command line like this:
+```
+  - on Mac, this can be launched from the terminal via `/Applications/Organteq\ 2/Organteq\ 2.app/Contents/MacOS/Organteq\ 2 --serve`
+```
+
+Then, the following are _voice commands_ that you issue (speak) while the Organteq app is focused.
 
 ### Basic stop control
 ```
@@ -65,9 +69,9 @@ toggle last                 # toggle whatever stops were just used
 
 ### Clearing stops
 ```
-clear great                 # Turn off all stops on the Great
-clear swell                 # Turn off all stops on the Swell
-clear choir                 # Turn off all stops on the Choir
+clear great                 # turn off all stops on the Great
+clear swell                 # turn off all stops on the Swell
+clear choir                 # turn off all stops on the Choir
 ```
 
 
