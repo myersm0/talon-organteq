@@ -10,14 +10,14 @@ current_manual = 0
 last_stops = {
 	"1": [],  # pedal
 	"2": [],  # choir
-	"3": [],  # graet
+	"3": [],  # great
 	"4": []   # swell
 }
 
 remembered_stops = {
 	"1": [],  # pedal
 	"2": [],  # choir
-	"3": [],  # graet
+	"3": [],  # great
 	"4": []   # swell
 }
 
