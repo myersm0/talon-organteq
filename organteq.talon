@@ -6,8 +6,14 @@ app: /organteq/i
 ^clear {user.organteq_manual}$:
 	user.organteq_clear_manual(organteq_manual)
 
-^{user.organteq_manual} {user.organteq_stop_number}+$:
+^[toggle] {user.organteq_manual} {user.organteq_stop_number}+$:
 	user.organteq_toggle_stops(organteq_manual, organteq_stop_number_list)
+
+^push {user.organteq_manual} {user.organteq_stop_number}+$:
+	user.organteq_push_stops(organteq_manual, organteq_stop_number_list)
+
+^pull {user.organteq_manual} {user.organteq_stop_number}+$:
+	user.organteq_pull_stops(organteq_manual, organteq_stop_number_list)
 
 ^(with|use|using) {user.organteq_manual}$:
 	user.organteq_set_manual(organteq_manual)
@@ -15,6 +21,14 @@ app: /organteq/i
 ^[toggle] {user.organteq_stop_number}+$:
 	which_manual = user.organteq_get_manual()
 	user.organteq_toggle_stops(which_manual, organteq_stop_number_list)
+
+^push {user.organteq_stop_number}+$:
+	which_manual = user.organteq_get_manual()
+	user.organteq_push_stops(which_manual, organteq_stop_number_list)
+
+^pull {user.organteq_stop_number}+$:
+	which_manual = user.organteq_get_manual()
+	user.organteq_pull_stops(which_manual, organteq_stop_number_list)
 
 ^toggle last$:
 	user.organteq_toggle_last()

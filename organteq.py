@@ -38,6 +38,24 @@ def organteq_call(payload):
 
 @mod.action_class
 class Actions:
+	def organteq_set_stop(manual: str, stop: int, value: float):
+		"""set an Organteq stop to a specific value (0.0 or 1.0)"""
+		parameter_id = f"Stop[{manual}][{stop}].Switch"
+		set_payload = {
+			"method": "setParameters",
+			"params": [{"id": parameter_id, "normalized_value": value}],
+			"jsonrpc": "2.0",
+			"id": 1
+		}
+		organteq_call(set_payload)
+
+	def organteq_set_stops(manual: str, stops: list[int], value: float):
+		"""set a list of Organteq stops to a specific value (0.0 or 1.0)"""
+		global last_stops
+		last_stops[manual] = stops
+		for stop in stops:
+			actions.user.organteq_set_stop(manual, stop, value)
+
 	def organteq_toggle_stop(manual: str, stop: int):
 		"""toggle an Organteq stop on or off"""
 		parameter_id = f"Stop[{manual}][{stop}].Switch"
@@ -54,16 +72,18 @@ class Actions:
 			response = json.loads(response_text)
 			current_value = response["result"][0]["normalized_value"]
 			new_value = 0.0 if current_value == 1.0 else 1.0
-			set_payload = {
-				"method": "setParameters",
-				"params": [{"id": parameter_id, "normalized_value": new_value}],
-				"jsonrpc": "2.0",
-				"id": 2
-			}
-			organteq_call(set_payload)
+			actions.user.organteq_set_stop(manual, stop, new_value)
 		except (json.JSONDecodeError, KeyError) as e:
 			print(f"Command failed with error: {e}")
-	
+
+	def organteq_push_stops(manual: str, stops: list[int]):
+		"""turn an Organteq stop on (1.0)"""
+		actions.user.organteq_set_stops(manual, stops, 0.0)
+
+	def organteq_pull_stops(manual: str, stops: list[int]):
+		"""turn an Organteq stop off (0.0)"""
+		actions.user.organteq_set_stops(manual, stops, 1.0)
+
 	def organteq_toggle_stops(manual: str, stops: list[int]):
 		"""toggle multiple Organteq stops on or off"""
 		global last_stops
