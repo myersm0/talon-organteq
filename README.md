@@ -20,6 +20,8 @@ Organteq's RPC uses 1-indexed manual numbers:
 All manuals support up to 10 stops, except for the Great which can go up to 20.
 
 ## Commands
+The following are _voice commands_ that you issue (speak) while the Organteq app is focused.
+
 ### Basic Stop Control
 ```
 great one three twelve      # toggle stops 1, 3, and 12 on the Great
@@ -52,9 +54,9 @@ clear choir                 # Turn off all stops on the Choir
 ```
 
 ## Requirements
-- Talon Voice
-- talon-community
-- Modartt Organteq with JSON-RPC server enabled
+- [Talon Voice](https://talonvoice.com/)
+- [talon-community](https://github.com/talonhub/community)
+- Modartt's [Organteq 2](https://www.modartt.com/organteq_overview) with JSON-RPC server enabled
   - on Mac, this can be launched from the terminal via `/Applications/Organteq\ 2/Organteq\ 2.app/Contents/MacOS/Organteq\ 2 --serve`
 - `curl` available in system PATH
 
