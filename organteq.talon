@@ -41,15 +41,38 @@ app: /organteq/i
 
 
 ## accessing settings panels
-
-^settings$:
+^settings [general]$:
 	key(u)
 
-^stops$:
+^stops|stop settings$:
 	key(s)
 
-^tremulants$:
+^tremulants|tremulant settings$:
 	key(t)
+
+^expression settings$:
+	key(x)
+
+^couplers|coupler settings$:
+	key(r)
+
+^combination settings$:
+	key(b)
+
+^crescendo settings$:
+	key(d)
+
+^tuning settings$:
+	key(g)
+
+^jam (view|settings)$:
+	key(j)
+
+^double jam [view|settings]$:
+	key(k)
+
+
+
 
 
 
