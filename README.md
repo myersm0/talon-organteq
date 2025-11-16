@@ -17,11 +17,11 @@ First you should be aware of some inherent difficulties in getting good results 
 1. How to avoid false positives from the speech recognition engine (i.e. sounds from the organ being spuriously picked up as voice commands)
 2. How to ensure your spoken commands are clearly audible over the sound from Organteq
 
-To get around these things, your microphone and its placement will matter a lot. I use a Shure SM7db dynamic mic with cardiod pickup pattern, directed _away_ from my speakers and placed very close to my mouth while I'm playing (within about 6 inches ideally). Alternatively, a good directional headset mic may be even better at isolating your voice from environmental noise (and music), such as the DPA d:fine 4188 or 4288, but I have not tried that myself.
+To get around these things, your microphone and its placement will matter a lot. I have reasonably good results with my Shure SM7db dynamic mic with cardiod pickup pattern, directed _away_ from my speakers and placed very close to my mouth while I'm playing (within about 6 inches ideally). Alternatively, a good directional headset mic would presumably be much better at isolating your voice from environmental noise (and music), such as the DPA d:fine 4188 or 4288, but I have not tried that myself.
 
 Your choice of speech recognition model within Talon also matters. For example, the Conformer D2 engine (unfortunately available in Talon beta only) may do better at reducing false positives.
 
-You may additionally have a third problem of language and dialect, if you're not a native English speaker. I may be able to later report on alternative speech engines, but for now I am not sufficiently knowledgeable on the subject.
+You may additionally have a third problem of language and dialect, if you're not a native English speaker. I may be able to later report on alternative speech engines, but for now I am not sufficiently knowledgeable on the subject. I'm currently researching multi-lingual input currently so that I may eventually be able to allow reference to stops by name (which, in Organteq, are usually in French or German). But for now you can only reference them by number.
 
 ### Prerequisites
 - Install [Talon Voice](https://talonvoice.com/) and set up a speech engine
