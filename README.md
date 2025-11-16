@@ -10,16 +10,33 @@ This repo doesn't aspire to provide full control of Organteq. Rather the focus i
 - Memorize stop configurations per manual
 - Recall the last-used stops
 
-## Manual numbering
-Organteq's RPC uses 1-indexed manual numbers:
-- 1: Pedal
-- 2: Choir
-- 3: Great
-- 4: Swell
 
-All manuals support up to 10 stops, except for the Great which can go up to 20.
+## Getting started
+### The cocktail party problem
+First you should be aware of some inherent difficulties in getting good results from any setup like this in which you're trying to issue _voice commands_ while playing a potentially loud musical instrument. If you're using headphones, then you may be OK. But if you aren't, then you have two problems to solve in your setup:
+1. How to avoid false positives from the speech recognition engine (i.e. sounds from the organ being spuriously picked up as voice commands)
+2. How to ensure your spoken commands are clearly audible to the speech recognition, over the sound from Organteq
 
-## Commands
+To get around these things, your microphone and its placement will matter a lot. I use a Shure SM7db dynamic mic with cardiod pickup pattern, directed _away_ from my speakers and placed very close to my mouth while I'm playing (within about 6 inches ideally). Alternatively, a good directional headset mic may be even better at isolating your voice from environmental noise (and music), such as the DPA d:fine 4188 or 4288, but I have not tried that myself.
+
+Your choice of speech recognition model within Talon also matters. For example, the Conformer D2 engine (unfortunately available in Talon beta only) may do better at reducing false positives.
+
+You may additionally have a third problem of language and dialect, if you're not a native English speaker. I may be able to later report on alternative speech engines, but for now I am not sufficiently knowledgeable on the subject.
+
+### Prerequisites
+- Install [Talon Voice](https://talonvoice.com/)
+- Install [talon-community](https://github.com/talonhub/community)
+- Install Modartt's [Organteq 2](https://www.modartt.com/organteq_overview), and launch it with JSON-RPC server enabled
+  - on Mac, this can be launched from the terminal via `/Applications/Organteq\ 2/Organteq\ 2.app/Contents/MacOS/Organteq\ 2 --serve`
+- You must have `curl` available in your system PATH
+
+### Installation
+Once the prerequisites above are met, you can simply do this on Mac or Linux:
+```
+git clone https://github.com/myersm0/talon-organteq ~/.talon/user/
+```
+
+## Usage
 The following are _voice commands_ that you issue (speak) while the Organteq app is focused.
 
 ### Basic stop control
@@ -33,8 +50,8 @@ pedal four seven            # toggle Pedal stops 4 and 7
 Set a current manual to avoid repeating the manual name:
 ```
 use great                   # set Great as current manual
-toggle one three twelve     # toggle stops 1, 3, 12 on current manual (Great)
-toggle two four             # toggle stops 2, 4 (still on Great)
+one three twelve            # toggle stops 1, 3, 12 on current manual (Great)
+two four                    # toggle stops 2, 4 (still on Great)
 ```
 
 ### Memory features
@@ -53,12 +70,6 @@ clear swell                 # Turn off all stops on the Swell
 clear choir                 # Turn off all stops on the Choir
 ```
 
-## Requirements
-- [Talon Voice](https://talonvoice.com/)
-- [talon-community](https://github.com/talonhub/community)
-- Modartt's [Organteq 2](https://www.modartt.com/organteq_overview) with JSON-RPC server enabled
-  - on Mac, this can be launched from the terminal via `/Applications/Organteq\ 2/Organteq\ 2.app/Contents/MacOS/Organteq\ 2 --serve`
-- `curl` available in system PATH
 
 
 
