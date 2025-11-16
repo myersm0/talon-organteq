@@ -15,7 +15,7 @@ This repo doesn't aspire to provide full control of Organteq. Rather the focus i
 ### The cocktail party problem
 First you should be aware of some inherent difficulties in getting good results from any setup like this in which you're trying to issue _voice commands_ while playing a potentially loud musical instrument. If you're using headphones, then you may be OK. But if you aren't, then you have two problems to solve in your setup:
 1. How to avoid false positives from the speech recognition engine (i.e. sounds from the organ being spuriously picked up as voice commands)
-2. How to ensure your spoken commands are clearly audible to the speech recognition, over the sound from Organteq
+2. How to ensure your spoken commands are clearly audible over the sound from Organteq
 
 To get around these things, your microphone and its placement will matter a lot. I use a Shure SM7db dynamic mic with cardiod pickup pattern, directed _away_ from my speakers and placed very close to my mouth while I'm playing (within about 6 inches ideally). Alternatively, a good directional headset mic may be even better at isolating your voice from environmental noise (and music), such as the DPA d:fine 4188 or 4288, but I have not tried that myself.
 
