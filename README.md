@@ -85,6 +85,21 @@ clear swell                  # turn off all stops on the Swell
 clear choir                  # turn off all stops on the Choir
 ```
 
+### Sending custom MIDI
+This repo also provides a function `organteq_midi_send` that allows you to send arbitrary MIDI messages by voice to Organteq. Although no voice mappings are defined here, you can make any number of mappings yourself by putting something like the following in a file ending in `.talon` somewhere within your `~/.talon/user/` directory:
+
+```
+app: /organteq/i
+-
+middle see on:
+    user.organteq_midi_send(144, 64, 64)
+middle see off:
+    user.organteq_midi_send(128, 64, 64)
+```
+
+Then, by speaking "middle C on" you send a note-on message to Organteq that will trigger the note C4. Of course, this is an inconvenient way to play notes, but you can extend this concept to send program changes and control messages to Organteq, as well. (In the Organteq GUI, see MIDI Mappings > Action mapping.)
+
+
 
 
 

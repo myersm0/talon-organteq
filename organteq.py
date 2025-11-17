@@ -148,4 +148,14 @@ class Actions:
 		"""get the current manual"""
 		return str(current_manual)
 
+	def organteq_midi_send(byte1: int, byte2: int, byte3: int):
+		"""send raw MIDI bytes to Organteq"""
+		payload = {
+			"method": "midiSend",
+			"params": [[byte1, byte2, byte3]],
+			"jsonrpc": "2.0",
+			"id": 1
+		}
+		organteq_call(payload)
+
 
