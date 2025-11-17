@@ -25,7 +25,6 @@ You may additionally have a third problem of language and accent, if you're not 
 
 ### Prerequisites
 - Install [Talon Voice](https://talonvoice.com/) and set up a speech engine
-- Install [talon-community](https://github.com/talonhub/community)
 - Install Modartt's [Organteq 2](https://www.modartt.com/organteq_overview)
 - You must have `curl` available in your system PATH
 
