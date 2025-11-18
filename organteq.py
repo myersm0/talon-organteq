@@ -63,7 +63,10 @@ def get_stops_by_family(manual: str, family: str, footage: str = None) -> list[s
 				continue
 			base_name_match = re.match(r"^(.+?)\s*\d+", stop_name)
 			base_name = base_name_match.group(1).strip() if base_name_match else stop_name
-			if base_name in family_mappings and family_mappings[base_name] == family:
+			if base_name not in family_mappings:
+				print(f"Warning: stop '{base_name}' is unknown; no mapping to a tonal family defined!")
+				continue
+			if family_mappings[base_name] == family:
 				if footage:
 					footage_match = re.search(rf"{footage}", stop_name)
 					if footage_match:
