@@ -93,7 +93,7 @@ pull 8-foot principals       # engage all 8-foot principal stops
 push flutes                  # disengage all flute stops
 ```
 
-Available families: `principals`, `flutes`, `strings`, `reeds`, `mutations`, `mixtures`. (Note: classification by stop family is currently only implemented for the Alsacian Organ I preset; more coming soon.)
+Available families: `principals`, `flutes`, `strings`, `reeds`, `mutations`, `mixtures`.
 
 ### Memory features
 Each manual maintains separate memory for "last stops" and "remembered stops":
