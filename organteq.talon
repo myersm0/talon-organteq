@@ -39,6 +39,10 @@ app: /organteq/i
 ^toggle$:
 	user.organteq_toggle_remembered()
 
+^[toggle] [{user.organteq_footage}] {user.organteq_tonal_family}$:
+	which_manual = user.organteq_get_manual()
+	footage = organteq_footage or ""
+	user.organteq_toggle_stops_by_family(which_manual, organteq_tonal_family, footage)
 
 ## accessing settings panels
 ^settings [general]$:

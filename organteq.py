@@ -1,6 +1,7 @@
 import subprocess
 import json
-from talon import Module, actions
+from talon import Module, actions, registry
+import re
 
 mod = Module()
 
@@ -158,4 +159,39 @@ class Actions:
 		}
 		organteq_call(payload)
 
+	def organteq_toggle_stops_by_family(manual: str, family: str, footage: str = None):
+		"""toggle stops on a manual by tonal family and optional footage"""
+		get_stops_payload = {
+			"method": "getStopNames",
+			"params": [],
+			"jsonrpc": "2.0",
+			"id": 1
+		}
+		response_text = organteq_call(get_stops_payload)
+		if not response_text:
+			return
+		try:
+			response = json.loads(response_text)
+			manual_stops = response["result"][int(manual) - 1]
+			# todo: better way to access this list?
+			classes = registry.contexts["user.talon-organteq.lists"].lists["user.organteq_stop_classification"]
+			matching_stop_numbers = []
+			for index, stop_name in enumerate(manual_stops, start=1):
+				if not stop_name:
+					continue
+				base_name_match = re.match(r"^(.+?)\s*\d+", stop_name)
+				base_name = base_name_match.group(1).strip() if base_name_match else stop_name
+				if base_name in classes and classes[base_name] == family:
+					if footage:
+						footage_match = re.search(rf"{footage}", stop_name)
+						if footage_match:
+							matching_stop_numbers.append(str(index))
+					else:
+						matching_stop_numbers.append(str(index))
+			if matching_stop_numbers:
+				actions.user.organteq_toggle_stops(manual, matching_stop_numbers)
+			else:
+				print(f"No {family} stops found on manual {manual}" + (f" at {footage}'" if footage else ""))
+		except (json.JSONDecodeError, KeyError, IndexError) as e:
+			print(f"Failed to get stops: {e}")
 
