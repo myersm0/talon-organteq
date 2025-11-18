@@ -4,12 +4,13 @@
 This repo doesn't aspire to provide full control of Organteq. Rather the focus is on just a small subset of commands that are particularly useful to be able to modify hands-free during play.
 
 ## Features
-- Toggle individual stops or multiple stops at once
+- Toggle, engage, or disengage stops by number or by tonal family
+- Filter stops by footage (e.g., "8 foot reeds")
 - Clear all stops on a manual
-- Set a _current manual_ context for subsequent commands
+- Set and remember a _current manual_ context for subsequent commands
 - Memorize stop configurations per manual
 - Recall the last-used stops
-
+- Send custom MIDI messages
 
 ## Getting started
 ### The cocktail party problem
@@ -35,54 +36,73 @@ git clone https://github.com/myersm0/talon-organteq ~/.talon/user/
 ```
 
 ## Usage
-First you will have to launch Organteq with JSON-RPC server enables. On a Mac this can be done from the command line like this:
+First you will have to launch Organteq with JSON-RPC server enabled. On a Mac this can be done from the command line like this:
 ```
 /Applications/Organteq\ 2/Organteq\ 2.app/Contents/MacOS/Organteq\ 2 --serve
 ```
 
 Then, the following are _voice commands_ that you issue (speak) while the Organteq app is focused:
 
-### Basic stop control
-For modifying stops, the default action is to `toggle` them like this:
+### Stop control by number
+
+#### Basic operations
+Toggle stops (default action if no operation is specified):
 ```
 great one three twelve       # toggle stops 1, 3, and 12 on the Great
 swell two                    # toggle stop 2 on the Swell
 pedal four seven             # toggle Pedal stops 4 and 7
 ```
 
-If the respective stops are engaged, this will disengage them, and vice versa. 
-
-Alternatively you can `pull` and `push` stops to set them to a specific state, either _on_ or _off_ respectively:
+Engage stops (pull them out):
 ```
-pull great one three twelve  # on the Great, enage stops 1, 3, and 12
-push great one three twelve  # on the Great, disenage stops 1, 3, and 12
+pull great one three twelve       # engage stops 1, 3, and 12 on the Great
+engage great one three twelve     # same thing, different word
 ```
 
-The words `engage` and `disengage` are also available to use instead of `pull` and `push`, if you prefer. While they're more cumbersome to speak, they may have better recognition accuracy.
+Disengage stops (push them in):
+```
+push great one three twelve       # disengage stops 1, 3, and 12 on the Great
+disengage great one three twelve  # same thing, different word
+```
 
-### Manual context
+#### Using manual context
 Set a current manual to avoid repeating the manual name:
 ```
 use great                    # set Great as current manual
-one three twelve             # toggle stops 1, 3, 12 on current manual (Great)
-two four                     # toggle stops 2, 4 (still on Great)
-pull two four                # engage stops 2, 4 on Great, regardless of their current state
+one three twelve             # toggle stops 1, 3, 12 on Great
+pull two four                # engage stops 2, 4 on Great
+push five                    # disengage stop 5 on Great
 ```
 
-### Memory features
-Each manual maintains separate memory for "last stops" and "remembered stops".
-```
-use great
-remember one seven nine      # remember stops 1, 7, 9 for current manual
-toggle                       # toggle the remembered stops
-toggle last                  # toggle whatever stops were just used
-```
-
-### Clearing stops
+#### Clearing all stops
 ```
 clear great                  # turn off all stops on the Great
 clear swell                  # turn off all stops on the Swell
 clear choir                  # turn off all stops on the Choir
+clear pedal                  # turn off all stops on the Pedal
+```
+
+### Stop control by tonal family
+You can control groups of stops by their tonal family (principals, flutes, strings, reeds, mutations, mixtures) and optionally filter by footage:
+
+```
+use great                    # set context to Great manual
+toggle reeds                 # toggle all reed stops on Great
+pull 4-foot reeds            # engage all 4-foot reed stops
+pull 8-foot principals       # engage all 8-foot principal stops
+push flutes                  # disengage all flute stops
+```
+
+Available families: `principals`, `flutes`, `strings`, `reeds`, `mutations`, `mixtures`. (Note: classification by stop family is currently only implemented for the Alsacian Organ I preset; more coming soon.)
+
+### Memory features
+Each manual maintains separate memory for "last stops" and "remembered stops":
+```
+use great
+remember one seven nine      # remember stops 1, 7, 9 for Great
+toggle                       # toggle the remembered stops
+push                         # engage the remembered stops
+toggle last                  # toggle whatever stops were most recently used
 ```
 
 ### Sending custom MIDI
@@ -98,10 +118,5 @@ middle see off:
 ```
 
 Then, by speaking "middle C on" you send a note-on message to Organteq that will trigger the note C4. Of course, this is an inconvenient way to play notes, but you can extend this concept to send program changes and control messages to Organteq, as well. (In the Organteq GUI, see MIDI Mappings > Action mapping.)
-
-
-
-
-
 
 
