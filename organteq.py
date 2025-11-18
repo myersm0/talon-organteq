@@ -1,6 +1,6 @@
 import subprocess
 import json
-from talon import Module, actions, registry
+from talon import Module, actions, registry, resource
 import re
 
 mod = Module()
@@ -36,6 +36,11 @@ def organteq_call(payload):
 		print(f"Command failed with error: {e}")
 		return None
 
+@resource.watch("family_mappings.json")
+def load_family_mappings(path):
+	global family_mappings
+	family_mappings = json.load(path)
+
 def get_stops_by_number(manual: str, stop_numbers: list[str]) -> list[str]:
 	return stop_numbers
 
@@ -52,14 +57,13 @@ def get_stops_by_family(manual: str, family: str, footage: str = None) -> list[s
 	try:
 		response = json.loads(response_text)
 		manual_stops = response["result"][int(manual) - 1]
-		classes = registry.contexts["user.talon-organteq.lists"].lists["user.organteq_stop_classification"]
 		matching_stop_numbers = []
 		for index, stop_name in enumerate(manual_stops, start=1):
 			if not stop_name:
 				continue
 			base_name_match = re.match(r"^(.+?)\s*\d+", stop_name)
 			base_name = base_name_match.group(1).strip() if base_name_match else stop_name
-			if base_name in classes and classes[base_name] == family:
+			if base_name in family_mappings and family_mappings[base_name] == family:
 				if footage:
 					footage_match = re.search(rf"{footage}", stop_name)
 					if footage_match:

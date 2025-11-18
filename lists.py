@@ -48,44 +48,6 @@ ctx.lists["self.organteq_tonal_family"] = {
 	"mixtures": "mixture",
 }
 
-mod.list("organteq_stop_classification", desc="Organteq stops matched with the tonal families they belong to")
-ctx.lists["self.organteq_stop_classification"] = {
-	# from Asacian Organ I preset:
-	"Gross Quintaden": "flute",
-	"Gross Untersatz": "principal",
-	"Prinzipal": "principal",
-	"Schalmei": "reed",
-	"Flöte": "flute",
-	"Fagott": "reed",
-	"Bombarde": "reed",
-	"Trompette": "reed",
-	"Clairon": "reed",
-	"Zinke": "reed",
-	"Doppel Flute": "flute",
-	"Unda Maris": "string",
-	"Gedact": "flute",
-	"Prestant": "principal",
-	"Flute": "flute",
-	"Nassad Quinta": "flute",
-	"Doublette": "principal",
-	"Tierce": "mutation",
-	"Zimbel": "mixture",
-	"Hautbois": "reed",
-	"Bourdon": "flute",
-	"Montre": "principal",
-	"Viol Gamba": "string",
-	"Nasard": "flute",
-	"Super Octav": "principal",
-	"Tertia": "mutation",
-	"Sesquialtera": "mixture",
-	"Cornet V": "mixture",
-	"Plein Jeu III": "mixture",
-	"Vox Humana": "reed",
-	"Larigot": "flute",
-	"Piccolo": "flute",
-	"Trommet": "reed",
-}
-
 mod.list("organteq_footage", desc="Standard organ stop footages")
 ctx.lists["self.organteq_footage"] = {
 	"thirty two foot": "32'",
