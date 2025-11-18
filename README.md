@@ -76,10 +76,11 @@ push five                    # disengage stop 5 on Great
 
 #### Clearing all stops
 ```
-clear great                  # turn off all stops on the Great
-clear swell                  # turn off all stops on the Swell
-clear choir                  # turn off all stops on the Choir
-clear pedal                  # turn off all stops on the Pedal
+cancel great                  # turn off all stops on the Great
+cancel swell                  # turn off all stops on the Swell
+cancel choir                  # turn off all stops on the Choir
+cancel pedal                  # turn off all stops on the Pedal
+general cancel                # turn off all stops on all keyboards
 ```
 
 ### Stop control by tonal family

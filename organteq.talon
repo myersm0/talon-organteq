@@ -2,8 +2,18 @@ app: /organteq/i
 -
 
 ## stop control by number
-^clear {user.organteq_manual}$:
+^(clear|cancel) {user.organteq_manual}$:
 	user.organteq_clear_manual(organteq_manual)
+
+^(clear|cancel)$:
+	which_manual = user.organteq_get_manual()
+	user.organteq_clear_manual(which_manual)
+
+^general cancel$:
+	user.organteq_clear_manual(1)
+	user.organteq_clear_manual(2)
+	user.organteq_clear_manual(3)
+	user.organteq_clear_manual(4)
 
 ^[toggle] {user.organteq_manual} {user.organteq_stop_number}+$:
 	user.organteq_toggle_stops_by_number(organteq_manual, organteq_stop_number_list)
