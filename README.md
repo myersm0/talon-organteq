@@ -111,5 +111,5 @@ toggle last                  # toggle whatever stops were most recently used
 ```
 
 ### Demo video
-[![talon-organteq usage demo](./assets/demo_thumbnail.png)](https://vimeo.com/1138588497 "talon-organteq usage demo")
+[![talon-organteq usage demo](./assets/demo_thumbnail.png)](https://vimeo.com/1138588497#t=5 "talon-organteq usage demo")
 
