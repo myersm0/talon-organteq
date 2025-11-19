@@ -1,7 +1,7 @@
 app: /organteq/i
 -
 
-## stop control by number
+## clear/cancel
 ^(clear|cancel) {user.organteq_manual}$:
 	user.organteq_clear_manual(organteq_manual)
 
@@ -15,6 +15,8 @@ app: /organteq/i
 	user.organteq_clear_manual("3")
 	user.organteq_clear_manual("4")
 
+
+## stop control by number for a specific manual
 ^[toggle] {user.organteq_manual} {user.organteq_stop_number}+$:
 	user.organteq_toggle_stops_by_number(organteq_manual, organteq_stop_number_list)
 
@@ -23,6 +25,7 @@ app: /organteq/i
 
 ^(pull|engage) {user.organteq_manual} {user.organteq_stop_number}+$:
 	user.organteq_pull_stops_by_number(organteq_manual, organteq_stop_number_list)
+
 
 ## stop control by number using current manual context
 ^(with|use|using) {user.organteq_manual}$:
@@ -39,6 +42,21 @@ app: /organteq/i
 ^(pull|engage) {user.organteq_stop_number}+$:
 	which_manual = user.organteq_get_manual()
 	user.organteq_pull_stops_by_number(which_manual, organteq_stop_number_list)
+
+
+## stop control by tonal family for a specific manual
+^[toggle] {user.organteq_manual} [{user.organteq_footage}] {user.organteq_tonal_family}$:
+	footage = organteq_footage or ""
+	user.organteq_toggle_stops_by_family(organteq_manual, organteq_tonal_family, footage)
+
+^(push|disengage) {user.organteq_manual} [{user.organteq_footage}] {user.organteq_tonal_family}$:
+	footage = organteq_footage or ""
+	user.organteq_push_stops_by_family(organteq_manual, organteq_tonal_family, footage)
+
+^(pull|engage) {user.organteq_manual} [{user.organteq_footage}] {user.organteq_tonal_family}$:
+	footage = organteq_footage or ""
+	user.organteq_pull_stops_by_family(organteq_manual, organteq_tonal_family, footage)
+
 
 
 ## stop control by tonal family using current manual context
