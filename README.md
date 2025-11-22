@@ -7,7 +7,8 @@ Organteq is a trademark of Modartt. This project is not affiliated with or endor
 
 ## Features
 - Manipulate stops by number, tonal family, and footage (e.g., "8-foot reeds")
-- Clear all stops on a manual
+  - Stops can be toggled, pushed, pulled, or solo'd
+- Clear all stops on a manual or all manuals at once
 - Memorize stop configurations per manual
 - Recall the last-used stops
 - Send custom MIDI messages
@@ -46,12 +47,13 @@ The general syntax for controlling stops follows the pattern:
 ```
 
 Where:
-- **action** (optional): The operation to perform. Can be `toggle` (default if omitted), `push`/`disengage`, or `pull`/`engage`
+- **action** (optional): The operation to perform. Can be `toggle` (default if omitted), `push`/`disengage`, `pull`/`engage`, or `solo`
 - **manual** (optional): The target manual (`pedal`, `choir`, `great`, or `swell`). Can be omitted if you've previously set a manual context with `use [manual]`
 - **stop-identifiers** (required): Specify which stops to control. Can be either:
   - Stop numbers (e.g., `one three five`)
-  - A tonal family (e.g., `reeds`, `principals`)
+  - A tonal family (e.g., `reeds`)
   - A footage combined with a tonal family (e.g., `8-foot reeds`)
+  - The word `memory` to reference a bank of manual-specific remembered stops
 
 #### Stop control by number
 ```
@@ -70,20 +72,25 @@ Disengage stops (push them in):
 push great one three twelve       # disengage stops 1, 3, and 12 on the Great
 ```
 
+Solo stops (engage selected stops, clear all others on that manual):
+```
+solo great one three twelve       # solo stops 1, 3, and 12 on Great
+```
+
 Set a current manual to avoid repeating the manual name:
 ```
 use great                    # set Great as current manual
 one three twelve             # toggle stops 1, 3, 12 on Great
 pull two four                # engage stops 2, 4 on Great
 push five                    # disengage stop 5 on Great
+solo one six                 # engage only stops 1 and 6 on Great
 ```
 
-Clearing all stops follows a slightly different pattern:
+Clearing all stops:
 ```
 cancel great                  # turn off all stops on the Great
 cancel swell                  # turn off all stops on the Swell
-cancel choir                  # turn off all stops on the Choir
-cancel pedal                  # turn off all stops on the Pedal
+cancel                        # turn off all stops on current manual
 general cancel                # turn off all stops on all keyboards
 ```
 
@@ -96,20 +103,36 @@ toggle reeds                 # toggle all reed stops on Great
 pull 4-foot reeds            # engage all 4-foot reed stops
 pull 8-foot principals       # engage all 8-foot principal stops
 push flutes                  # disengage all flute stops
+solo 8-foot reeds            # engage only 8-foot reeds, clear all other stops on Great
+```
+
+You can also specify the manual explicitly:
+```
+pull great 4-foot reeds      # engage all 4-foot reeds on Great
+solo swell principals        # engage only principals on Swell, clear all other stops
 ```
 
 Available families: `principals`, `flutes`, `strings`, `reeds`, `mutations`, `mixtures`.
 
 ### Memory features
-Each manual maintains separate memory for "last stops" and "remembered stops":
+Each manual maintains its own memory for frequently-used stop combinations:
+
 ```
 use great
 remember one seven nine      # remember stops 1, 7, 9 for Great
-toggle                       # toggle the remembered stops
-push                         # engage the remembered stops
+remember choir two five      # remember stops 2, 5 for Choir (different memory)
+
+toggle memory                # toggle the remembered stops on current manual
+pull memory                  # engage the remembered stops on current manual
+push memory                  # disengage the remembered stops on current manual
+solo memory                  # engage only the remembered stops, clear all others
+
+toggle great memory          # toggle Great's remembered stops (regardless of context)
+pull choir memory            # engage Choir's remembered stops
+solo swell memory            # engage only Swell's remembered stops
+
 toggle last                  # toggle whatever stops were most recently used
 ```
 
 ### Demo video
 [![talon-organteq usage demo](./assets/demo_thumbnail.png)](https://vimeo.com/1138588497#t=5 "talon-organteq usage demo")
-
