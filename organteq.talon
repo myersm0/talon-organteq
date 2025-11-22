@@ -94,15 +94,21 @@ app: /organteq/i
 
 
 ## memory features
+^remember {user.organteq_manual} {user.organteq_stop_number}+$:
+	user.organteq_remember_stops(organteq_manual, organteq_stop_number_list)
+
 ^remember {user.organteq_stop_number}+$:
 	which_manual = user.organteq_get_manual()
 	user.organteq_remember_stops(which_manual, organteq_stop_number_list)
 
 ^[toggle] {user.organteq_manual} memory$:
-	user.organteq_toggle_remembered()
+	stops = user.organteq_get_remembered_stops(organteq_manual)
+	user.organteq_toggle_stops_by_number(organteq_manual, stops)
 
 ^[toggle] memory$:
-	user.organteq_toggle_remembered()
+	which_manual = user.organteq_get_manual()
+	stops = user.organteq_get_remembered_stops(which_manual)
+	user.organteq_toggle_stops_by_number(which_manual, stops)
 
 ^(push|disengage) {user.organteq_manual} memory$:
 	stops = user.organteq_get_remembered_stops(organteq_manual)
