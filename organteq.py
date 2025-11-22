@@ -133,6 +133,24 @@ def pull_stops(manual: str, stop_numbers: list[str]):
 
 @mod.action_class
 class Actions:
+	def organteq_get_current_preset() -> str:
+		"""get the name of the current preset"""
+		payload = {
+			"method": "getInfo",
+			"params": [],
+			"jsonrpc": "2.0",
+			"id": 1
+		}
+		response_text = organteq_call(payload)
+		if not response_text:
+			return ""
+		try:
+			response = json.loads(response_text)
+			return response["result"][0]["current_preset"]["name"]
+		except (json.JSONDecodeError, KeyError, IndexError) as e:
+			print(f"Failed to get current preset: {e}")
+			return ""
+
 	def organteq_toggle_stops_by_number(manual: str, stop_numbers: list[str]):
 		"""toggle stops by number"""
 		stops = get_stops_by_number(manual, stop_numbers)
