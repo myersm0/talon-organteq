@@ -142,6 +142,10 @@ def solo_stops(manual: str, stop_numbers: list[str]):
 		else:
 			push_stop(manual, stop_str)
 
+def get_remembered_stops(manual: str) -> list[str]:
+	return remembered_stops.get(manual, [])
+
+
 @mod.action_class
 class Actions:
 	def organteq_get_current_preset() -> str:
@@ -230,13 +234,9 @@ class Actions:
 			return
 		toggle_stops(manual, stops)
 
-	def organteq_remember_stops(stops: list[str]):
-		"""remember stops for current manual"""
+	def organteq_remember_stops(manual: str, stops: list[str]):
+		"""remember stops for a manual"""
 		global remembered_stops
-		manual = actions.user.organteq_get_manual()
-		if manual == "0":
-			print("No manual selected")
-			return
 		remembered_stops[manual] = stops
 
 	def organteq_toggle_remembered():
@@ -250,6 +250,10 @@ class Actions:
 			print(f"No remembered stops for manual {manual}")
 			return
 		toggle_stops(manual, stops)
+
+	def organteq_get_remembered_stops(manual: str) -> list[str]:
+		"""get remembered stops for a manual"""
+		return get_remembered_stops(manual)
 
 	def organteq_clear_manual(manual: str):
 		"""set all stops on a manual to 0.0"""
@@ -282,3 +286,5 @@ class Actions:
 			"id": 1
 		}
 		organteq_call(payload)
+
+
