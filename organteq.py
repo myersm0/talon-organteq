@@ -131,6 +131,17 @@ def pull_stops(manual: str, stop_numbers: list[str]):
 	for stop in stop_numbers:
 		pull_stop(manual, stop)
 
+def solo_stops(manual: str, stop_numbers: list[str]):
+	global last_stops
+	last_stops[manual] = stop_numbers
+	max_stops = 20 if manual == "3" else 10
+	for stop in range(1, max_stops + 1):
+		stop_str = str(stop)
+		if stop_str in stop_numbers:
+			pull_stop(manual, stop_str)
+		else:
+			push_stop(manual, stop_str)
+
 @mod.action_class
 class Actions:
 	def organteq_get_current_preset() -> str:
@@ -190,6 +201,20 @@ class Actions:
 		stops = get_stops_by_family(manual, family, footage)
 		if stops:
 			pull_stops(manual, stops)
+		else:
+			print(f"No {family} stops found on manual {manual}" + (f" at {footage}'" if footage else ""))
+
+	def organteq_solo_stops_by_number(manual: str, stop_numbers: list[str]):
+		"""solo stops by number (engage these, clear all others)"""
+		stops = get_stops_by_number(manual, stop_numbers)
+		if stops:
+			solo_stops(manual, stops)
+
+	def organteq_solo_stops_by_family(manual: str, family: str, footage: str = None):
+		"""solo stops by tonal family (engage these, clear all others)"""
+		stops = get_stops_by_family(manual, family, footage)
+		if stops:
+			solo_stops(manual, stops)
 		else:
 			print(f"No {family} stops found on manual {manual}" + (f" at {footage}'" if footage else ""))
 
