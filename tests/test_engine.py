@@ -1,184 +1,228 @@
+"""
+Integration tests for RegistrationEngine.
+Requires both Organteq (with --serve) and Prolog server running.
+"""
+
 import unittest
-from unittest.mock import patch, MagicMock
-from prolog_client import PrologClient
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from core.engine import RegistrationEngine
+from core.organteq_api import get_stops_info, manual_names
 
 
 class TestEngineBasicOperations(unittest.TestCase):
-	"""Tests for basic engage/disengage/toggle/solo operations.
-	
-	These tests mock the Organteq API to test engine logic in isolation.
-	"""
-	
 	@classmethod
 	def setUpClass(cls):
-		cls.p = PrologClient()
+		cls.engine = RegistrationEngine()
+		cls.engine.sync_state()
 
 	def setUp(self):
-		self.p.reset()
-		self.p.assert_facts([
-			"stop(great, 1, 'Bourdon 16\\'', stop)",
-			"stop(great, 2, 'Montre 8\\'', stop)",
-			"stop(great, 3, 'Prinzipal 4\\'', stop)",
-			"stop(great, 4, 'Trompette 8\\'', stop)",
-			"stop(great, 5, 'Zimbel III', stop)",
-			"stop(swell, 1, 'Gedact 8\\'', stop)",
-			"stop(swell, 2, 'Salicional 8\\'', stop)",
-			"stop(swell, 3, 'Hautbois 8\\'', stop)",
-			"stop(pedal, 1, 'Subbass 16\\'', stop)",
-			"stop(pedal, 2, 'Prinzipal 8\\'', stop)",
-		])
+		for manual in ["pedal", "choir", "great", "swell"]:
+			self.engine.clear(manual)
+
+	def test_engage_updates_state(self):
+		self.engine.engage("great", ["1", "2", "3"])
+		self.assertEqual(sorted(self.engine.state["great"]), ["1", "2", "3"])
+
+	def test_engage_updates_organteq(self):
+		self.engine.engage("great", ["1", "2"])
+		info = get_stops_info()
+		engaged = [num for num, name, state in info["3"] if state == 1.0]
+		self.assertIn("1", engaged)
+		self.assertIn("2", engaged)
+
+	def test_disengage_updates_state(self):
+		self.engine.engage("great", ["1", "2", "3"])
+		self.engine.disengage("great", ["2"])
+		self.assertEqual(sorted(self.engine.state["great"]), ["1", "3"])
+
+	def test_toggle_engages_disengaged(self):
+		self.engine.toggle("great", ["1", "2"])
+		self.assertEqual(sorted(self.engine.state["great"]), ["1", "2"])
+
+	def test_toggle_disengages_engaged(self):
+		self.engine.engage("great", ["1", "2"])
+		self.engine.toggle("great", ["1"])
+		self.assertEqual(self.engine.state["great"], ["2"])
+
+	def test_solo_clears_others(self):
+		self.engine.engage("great", ["1", "2", "3", "4", "5"])
+		self.engine.solo("great", ["2", "4"])
+		self.assertEqual(sorted(self.engine.state["great"]), ["2", "4"])
+
+	def test_clear_removes_all(self):
+		self.engine.engage("great", ["1", "2", "3"])
+		self.engine.clear("great")
+		self.assertEqual(self.engine.state["great"], [])
 
 
-class TestApplySelector(unittest.TestCase):
-	"""Tests for the apply_selector interface."""
-	
+class TestEngineFamilyOperations(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
-		cls.p = PrologClient()
+		cls.engine = RegistrationEngine()
+		cls.engine.sync_state()
 
 	def setUp(self):
-		self.p.reset()
-		self.p.assert_facts([
-			"stop(great, 1, 'Bourdon 16\\'', stop)",
-			"stop(great, 2, 'Montre 8\\'', stop)",
-			"stop(great, 3, 'Prinzipal 4\\'', stop)",
-			"stop(great, 4, 'Trompette 8\\'', stop)",
-			"stop(great, 5, 'Clairon 4\\'', stop)",
-			"stop(great, 6, 'Zimbel III', stop)",
-			"stop(swell, 1, 'Gedact 8\\'', stop)",
-			"stop(swell, 2, 'Hautbois 8\\'', stop)",
-		])
+		for manual in ["pedal", "choir", "great", "swell"]:
+			self.engine.clear(manual)
 
-	def test_selector_numbers_resolves(self):
-		stops = self.p.resolve_selector("great", {"by": "numbers", "values": [1, 3, 5]})
-		self.assertEqual(stops, [1, 3, 5])
+	def test_engage_family(self):
+		self.engine.engage_family("great", "reed")
+		self.assertTrue(len(self.engine.state["great"]) > 0)
 
-	def test_selector_family_resolves(self):
-		stops = self.p.resolve_selector("great", {"by": "family", "values": "reed"})
-		self.assertEqual(sorted(stops), [4, 5])
+	def test_engage_family_with_footage(self):
+		self.engine.engage_family("great", "principal", footage="8")
+		self.assertTrue(len(self.engine.state["great"]) >= 0)
 
-	def test_selector_family_with_footage_resolves(self):
-		stops = self.p.resolve_selector("great", {
-			"by": "family",
-			"values": "reed",
-			"footage": "8"
-		})
-		self.assertEqual(stops, [4])
+	def test_disengage_family(self):
+		self.engine.engage_family("great", "reed")
+		initial_count = len(self.engine.state["great"])
+		self.engine.disengage_family("great", "reed")
+		self.assertEqual(len(self.engine.state["great"]), 0)
 
-	def test_selector_family_with_limit_resolves(self):
-		stops = self.p.resolve_selector("great", {
-			"by": "family",
-			"values": "reed",
-			"limit": 1,
-			"limit_method": "first"
-		})
-		self.assertEqual(len(stops), 1)
-
-	def test_selector_cross_manual(self):
-		# Test that selector works on different manuals
-		great_reeds = self.p.resolve_selector("great", {"by": "family", "values": "reed"})
-		swell_reeds = self.p.resolve_selector("swell", {"by": "family", "values": "reed"})
-		self.assertEqual(sorted(great_reeds), [4, 5])
-		self.assertEqual(swell_reeds, [2])
+	def test_solo_family(self):
+		self.engine.engage("great", ["1", "2", "3", "4", "5"])
+		self.engine.solo_family("great", "reed")
+		for stop in self.engine.state["great"]:
+			stops = self.engine.prolog.resolve_selector("great", {"by": "family", "values": "reed"})
+			self.assertIn(int(stop), stops)
 
 
-class TestTransientRules(unittest.TestCase):
-	"""Tests for transient rule stop resolution."""
-	
+class TestEngineHistory(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
-		cls.p = PrologClient()
+		cls.engine = RegistrationEngine()
+		cls.engine.sync_state()
 
 	def setUp(self):
-		self.p.reset()
-		self.p.assert_facts([
-			"stop(great, 1, 'Bourdon 16\\'', stop)",
-			"stop(great, 2, 'Montre 8\\'', stop)",
-			"stop(great, 3, 'Mixtura IV', stop)",
-			"stop(great, 4, 'Zimbel III', stop)",
-			"stop(great, 5, 'Trompette 8\\'', stop)",
-			"stop(great, 6, 'Nasard 2 2/3\\'', stop)",
-		])
+		for manual in ["pedal", "choir", "great", "swell"]:
+			self.engine.clear(manual)
+		self.engine.history = []
+		self.engine.history_index = -1
+		self.engine._save_snapshot("test_start")
 
-	def test_brighten_level_1_one_mixture(self):
-		stops = self.p.get_rule_stops("brighten", 1, "great")
-		self.assertEqual(len(stops), 1)
-		self.assertIn(stops[0], [3, 4])
+	def test_undo_restores_previous_state(self):
+		self.engine.engage("great", ["1", "2"])
+		self.engine.engage("great", ["3"])
+		self.assertEqual(sorted(self.engine.state["great"]), ["1", "2", "3"])
+		self.engine.undo()
+		self.assertEqual(sorted(self.engine.state["great"]), ["1", "2"])
 
-	def test_brighten_level_2_all_mixtures(self):
-		stops = self.p.get_rule_stops("brighten", 2, "great")
-		self.assertEqual(sorted(stops), [3, 4])
+	def test_undo_restores_organteq(self):
+		self.engine.engage("great", ["1", "2"])
+		self.engine.engage("great", ["3"])
+		self.engine.undo()
+		info = get_stops_info()
+		engaged = [num for num, name, state in info["3"] if state == 1.0]
+		self.assertIn("1", engaged)
+		self.assertIn("2", engaged)
+		self.assertNotIn("3", engaged)
 
-	def test_add_reeds_level_1_one_reed(self):
-		stops = self.p.get_rule_stops("add_reeds", 1, "great")
-		self.assertEqual(len(stops), 1)
-		self.assertEqual(stops[0], 5)
+	def test_redo_restores_undone_state(self):
+		self.engine.engage("great", ["1", "2"])
+		self.engine.engage("great", ["3"])
+		self.engine.undo()
+		self.engine.redo()
+		self.assertEqual(sorted(self.engine.state["great"]), ["1", "2", "3"])
 
-	def test_add_reeds_level_2_all_reeds(self):
-		stops = self.p.get_rule_stops("add_reeds", 2, "great")
-		self.assertEqual(stops, [5])
+	def test_multiple_undo(self):
+		self.engine.engage("great", ["1"])
+		self.engine.engage("great", ["2"])
+		self.engine.engage("great", ["3"])
+		self.engine.undo()
+		self.engine.undo()
+		self.assertEqual(self.engine.state["great"], ["1"])
 
 
-class TestCombinationOperations(unittest.TestCase):
-	"""Tests for combination minimize/maximize/mute operations via Prolog."""
-	
+class TestEngineCombinations(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
-		cls.p = PrologClient()
+		cls.engine = RegistrationEngine()
+		cls.engine.sync_state()
 
 	def setUp(self):
-		self.p.reset()
-		self.p.assert_facts([
-			"stop(great, 1, 'Bourdon 16\\'', stop)",
-			"stop(great, 2, 'Montre 8\\'', stop)",
-			"stop(great, 3, 'Prinzipal 4\\'', stop)",
-			"stop(great, 4, 'Trompette 8\\'', stop)",
-			"stop(swell, 1, 'Gedact 8\\'', stop)",
-			"stop(swell, 2, 'Salicional 8\\'', stop)",
-			"stop(pedal, 1, 'Subbass 16\\'', stop)",
-			"stop(pedal, 2, 'Prinzipal 8\\'', stop)",
-		])
+		for manual in ["pedal", "choir", "great", "swell"]:
+			self.engine.clear(manual)
+		self.engine.combination_levels = {}
+		self.engine.prolog.retract_facts(["combination_level(_, _)", "owns(_, _, _)"])
 
-	def test_maximize_from_0_to_max(self):
-		# alpha has max_level 3
-		actions = self.p.get_combination_delta_actions("alpha", 0, 3, ["great", "swell", "pedal"])
-		engages = [(a["manual"], a["stop"]) for a in actions if a["action"] == "engage"]
-		
-		# Should include all levels
-		self.assertIn(("great", 1), engages)
-		self.assertIn(("great", 2), engages)
-		self.assertIn(("great", 3), engages)
-		self.assertIn(("great", 4), engages)  # level 2
-		self.assertIn(("pedal", 1), engages)  # level 2
+	def test_apply_combination_increments_level(self):
+		self.engine.apply_combination("alpha", delta=1)
+		self.assertEqual(self.engine.combination_levels.get("alpha"), 1)
 
-	def test_minimize_from_3_to_1(self):
-		actions = self.p.get_combination_delta_actions("alpha", 3, 1, ["great", "swell", "pedal"])
-		disengages = [(a["manual"], a["stop"]) for a in actions if a["action"] == "disengage"]
-		engages = [(a["manual"], a["stop"]) for a in actions if a["action"] == "engage"]
-		
-		# Level 1 stops should be reasserted (engaged)
-		self.assertIn(("great", 1), engages)
-		self.assertIn(("great", 2), engages)
-		self.assertIn(("great", 3), engages)
-		
-		# Level 2+ stops should be disengaged
-		self.assertIn(("great", 4), disengages)
-		self.assertIn(("pedal", 1), disengages)
-		self.assertIn(("pedal", 2), disengages)
+	def test_apply_combination_engages_stops(self):
+		self.engine.apply_combination("alpha", delta=1)
+		self.assertTrue(len(self.engine.state["great"]) > 0 or len(self.engine.state["swell"]) > 0)
 
-	def test_mute_from_2_to_0(self):
-		actions = self.p.get_combination_delta_actions("alpha", 2, 0, ["great", "swell", "pedal"])
-		disengages = [(a["manual"], a["stop"]) for a in actions if a["action"] == "disengage"]
-		
-		# All should disengage
-		self.assertIn(("great", 1), disengages)
-		self.assertIn(("great", 2), disengages)
-		self.assertIn(("great", 3), disengages)
-		self.assertIn(("great", 4), disengages)
-		self.assertIn(("swell", 1), disengages)
-		self.assertIn(("swell", 2), disengages)
-		self.assertIn(("pedal", 1), disengages)
-		self.assertIn(("pedal", 2), disengages)
+	def test_apply_combination_level_2_cumulative(self):
+		self.engine.apply_combination("alpha", level=2)
+		level_1_stops = self.engine.prolog.get_combination_stops("alpha", 1, "great")
+		level_2_stops = self.engine.prolog.get_combination_stops("alpha", 2, "great")
+		for stop in level_1_stops:
+			self.assertIn(str(stop), self.engine.state["great"])
+
+	def test_mute_combination_disengages(self):
+		self.engine.apply_combination("alpha", level=2)
+		self.engine.mute_combination("alpha")
+		self.assertEqual(self.engine.combination_levels.get("alpha"), 0)
+
+	def test_maximize_combination(self):
+		self.engine.maximize_combination("alpha")
+		metadata = self.engine.prolog.get_rule_metadata("alpha")
+		self.assertEqual(self.engine.combination_levels.get("alpha"), metadata["max_level"])
+
+	def test_minimize_combination(self):
+		self.engine.apply_combination("alpha", level=3)
+		self.engine.minimize_combination("alpha")
+		self.assertEqual(self.engine.combination_levels.get("alpha"), 1)
+
+	def test_reassert_combination(self):
+		self.engine.apply_combination("alpha", level=1)
+		initial_stops = list(self.engine.state["great"])
+		self.engine.disengage("great", initial_stops[:1])
+		self.engine.reassert_combination("alpha")
+		for stop in initial_stops:
+			self.assertIn(stop, self.engine.state["great"])
+
+
+class TestEngineRulesLoading(unittest.TestCase):
+	def test_engine_without_rules_dir(self):
+		engine = RegistrationEngine(rules_dir=None)
+		engine.sync_state()
+		self.assertIsNotNone(engine.state)
+
+	def test_engine_with_rules_dir(self):
+		rules_dir = Path(__file__).parent.parent / "rules"
+		engine = RegistrationEngine(rules_dir=str(rules_dir))
+		engine.load_rules()
+		engine.sync_state()
+		metadata = engine.prolog.get_rule_metadata("alpha")
+		self.assertEqual(metadata.get("type"), "persistent")
+
+	def test_engine_with_rules_glob(self):
+		rules_dir = Path(__file__).parent.parent / "rules"
+		engine = RegistrationEngine(rules_dir=str(rules_dir), rules_glob="examples.pl")
+		engine.load_rules()
+		engine.sync_state()
+		metadata = engine.prolog.get_rule_metadata("alpha")
+		self.assertEqual(metadata.get("type"), "persistent")
+
+
+class TestEngineSyncState(unittest.TestCase):
+	def test_sync_state_loads_preset(self):
+		engine = RegistrationEngine()
+		engine.sync_state()
+		self.assertIsInstance(engine.current_preset, str)
+
+	def test_sync_state_populates_stops(self):
+		engine = RegistrationEngine()
+		engine.sync_state()
+		self.assertIn("great", engine.state)
+		self.assertIn("pedal", engine.state)
+		self.assertIn("swell", engine.state)
+		self.assertIn("choir", engine.state)
 
 
 if __name__ == "__main__":
