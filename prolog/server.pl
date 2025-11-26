@@ -33,10 +33,18 @@
 % Stop classification predicates
 % ============================================================================
 
+% Extract base name: everything before the footage pattern
+% Matches: "Name 8'", "Name 16'", "Name 2'2/3", "Name III", "Name 3f.", etc.
 base_name(FullName, BaseName) :-
 	atom_string(FullName, FullStr),
-	split_string(FullStr, " ", "", Parts),
-	Parts = [BaseStr|_],
+	(   re_matchsub("^(.+?)\\s+\\d+'?.*$"/i, FullStr, Sub, [])
+	->  get_dict(1, Sub, BaseStr)
+	;   re_matchsub("^(.+?)\\s+[IVX]+\\.?\\s*$"/i, FullStr, Sub, [])
+	->  get_dict(1, Sub, BaseStr)
+	;   re_matchsub("^(.+?)\\s+\\d+f\\.?\\s*$"/i, FullStr, Sub, [])
+	->  get_dict(1, Sub, BaseStr)
+	;   BaseStr = FullStr
+	),
 	atom_string(BaseName, BaseStr).
 
 stop_family(Manual, Number, Family) :-
