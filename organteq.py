@@ -41,6 +41,56 @@ def load_family_mappings(path):
 	global family_mappings
 	family_mappings = json.load(path)
 
+def get_stop_state(manual: str, stop: str):
+	"""get the normalized value (0.0 or 1.0) for a single stop"""
+	parameter_id = f"Stop[{manual}][{stop}].Switch"
+	get_payload = {
+		"method": "getParameters",
+		"params": [{"id": parameter_id}],
+		"jsonrpc": "2.0",
+		"id": 1
+	}
+	response_text = organteq_call(get_payload)
+	if not response_text:
+		return 0.0
+	try:
+		response = json.loads(response_text)
+		return response["result"][0]["normalized_value"]
+	except (json.JSONDecodeError, KeyError, IndexError):
+		return 0.0
+
+def get_stops_info():
+	"""get complete stop info for all manuals
+	returns: {manual: [(stop_number, stop_name, state), ...]}"""
+	get_stops_payload = {
+		"method": "getStopNames",
+		"params": [],
+		"jsonrpc": "2.0",
+		"id": 1
+	}
+	response_text = organteq_call(get_stops_payload)
+	if not response_text:
+		return {}
+	try:
+		response = json.loads(response_text)
+		manuals = ["1", "2", "3", "4"]
+		manual_names = response["result"]
+		result = {}
+		for manual in manuals:
+			manual_index = int(manual) - 1
+			stop_names = manual_names[manual_index]
+			max_stops = 20 if manual == "3" else 10
+			stops_info = []
+			for stop_num in range(1, max_stops + 1):
+				stop_name = stop_names[stop_num - 1] if stop_num - 1 < len(stop_names) else ""
+				state = get_stop_state(manual, str(stop_num))
+				stops_info.append((str(stop_num), stop_name, state))
+			result[manual] = stops_info
+		return result
+	except (json.JSONDecodeError, KeyError, IndexError) as e:
+		print(f"Failed to get stops info: {e}")
+		return {}
+
 def get_stops_by_number(manual: str, stop_numbers: list[str]) -> list[str]:
 	return stop_numbers
 
@@ -89,23 +139,9 @@ def set_stop(manual: str, stop: str, value: float):
 	organteq_call(set_payload)
 
 def toggle_stop(manual: str, stop: str):
-	parameter_id = f"Stop[{manual}][{stop}].Switch"
-	get_payload = {
-		"method": "getParameters",
-		"params": [{"id": parameter_id}],
-		"jsonrpc": "2.0",
-		"id": 1
-	}
-	response_text = organteq_call(get_payload)
-	if not response_text:
-		return
-	try:
-		response = json.loads(response_text)
-		current_value = response["result"][0]["normalized_value"]
-		new_value = 0.0 if current_value == 1.0 else 1.0
-		set_stop(manual, stop, new_value)
-	except (json.JSONDecodeError, KeyError) as e:
-		print(f"Command failed with error: {e}")
+	current_value = get_stop_state(manual, stop)
+	new_value = 0.0 if current_value == 1.0 else 1.0
+	set_stop(manual, stop, new_value)
 
 def push_stop(manual: str, stop: str):
 	set_stop(manual, stop, 0.0)
@@ -287,4 +323,8 @@ class Actions:
 		}
 		organteq_call(payload)
 
+	def organteq_get_stops_info():
+		"""get complete stop information including names and states
+		returns: {manual: [(stop_number, stop_name, state), ...]}"""
+		return get_stops_info()
 
