@@ -1,9 +1,23 @@
 import sys
 from pathlib import Path
-from talon import Module, actions
+from talon import Module, actions, settings
 from ..core.engine import RegistrationEngine
 
 mod = Module()
+
+mod.setting(
+	"talon_organteq_rules_dir",
+	type=str,
+	default=None,
+	desc="Directory containing Prolog rule files (.pl)"
+)
+
+mod.setting(
+	"talon_organteq_rules_glob",
+	type=str,
+	default="*.pl",
+	desc="Glob pattern for rule files to load"
+)
 
 engine = None
 current_manual = "great" # todo: not acceptable
@@ -14,8 +28,8 @@ def get_engine():
 		engine = RegistrationEngine(
 			prolog_host="localhost",
 			prolog_port=5000,
-            rules_dir=str("/Users/m/.talon/user/talon-organteq/rules"), # todo: fix this
-			user_rules_dir="~/.config/organteq_registration/rules"
+			rules_dir=settings.get("user.talon_organteq_rules_dir"),
+			rules_glob=settings.get("user.talon_organteq_rules_glob"),
 		)
 		engine.load_rules()
 		engine.sync_state()
