@@ -1,6 +1,6 @@
 from pathlib import Path
-from .client import PrologClient
-from .organteq_api import (
+from core.client import PrologClient
+from core.organteq_api import (
 	get_stops_info, manual_names, manual_numbers,
 	max_stops_per_manual, get_current_preset, set_stop
 )
@@ -13,11 +13,11 @@ class RegistrationEngine:
 		prolog_host: str = "localhost",
 		prolog_port: int = 5000,
 		rules_dir: str = None,
-		user_rules_dir: str = None
+		rules_glob: str = "*.pl"
 	):
 		self.prolog = PrologClient(prolog_host, prolog_port)
-		self.rules_dir = Path(rules_dir) if rules_dir else None
-		self.user_rules_dir = Path(user_rules_dir).expanduser() if user_rules_dir else None
+		self.rules_dir = Path(rules_dir).expanduser() if rules_dir else None
+		self.rules_glob = rules_glob
 		self.state = {manual: [] for manual in all_manuals}
 		self.combination_levels = {}
 		self.rule_levels = {}
@@ -26,12 +26,12 @@ class RegistrationEngine:
 		self.current_preset = ""
 
 	def load_rules(self):
-		if self.rules_dir:
-			for pl_file in self.rules_dir.glob("*.pl"):
-				self.prolog.load_file(str(pl_file))
-		if self.user_rules_dir and self.user_rules_dir.exists():
-			for pl_file in self.user_rules_dir.glob("*.pl"):
-				self.prolog.load_file(str(pl_file))
+		if self.rules_dir and self.rules_dir.exists():
+			for pl_file in self.rules_dir.glob(self.rules_glob):
+				try:
+					self.prolog.load_file(str(pl_file))
+				except Exception as e:
+					print(f"Failed to load {pl_file}: {e}")
 
 	def sync_state(self, save_snapshot: bool = True):
 		info = get_stops_info()
@@ -165,7 +165,7 @@ class RegistrationEngine:
 	def engage_family(self, manual: str, family: str, footage: str = None, limit: int = None):
 		selector = {"by": "family", "values": family}
 		if footage:
-			selector["footage"] = footage
+			selector["footage"] = int(footage)
 		if limit:
 			selector["limit"] = limit
 			selector["limit_method"] = "first"
@@ -174,7 +174,7 @@ class RegistrationEngine:
 	def disengage_family(self, manual: str, family: str, footage: str = None, limit: int = None):
 		selector = {"by": "family", "values": family}
 		if footage:
-			selector["footage"] = footage
+			selector["footage"] = int(footage)
 		if limit:
 			selector["limit"] = limit
 			selector["limit_method"] = "first"
@@ -183,7 +183,7 @@ class RegistrationEngine:
 	def toggle_family(self, manual: str, family: str, footage: str = None, limit: int = None):
 		selector = {"by": "family", "values": family}
 		if footage:
-			selector["footage"] = footage
+			selector["footage"] = int(footage)
 		if limit:
 			selector["limit"] = limit
 			selector["limit_method"] = "first"
@@ -192,13 +192,13 @@ class RegistrationEngine:
 	def solo_family(self, manual: str, family: str, footage: str = None):
 		selector = {"by": "family", "values": family}
 		if footage:
-			selector["footage"] = footage
+			selector["footage"] = int(footage)
 		self.apply_selector(manual, selector, action="solo")
 
 	def engage_family_all(self, family: str, footage: str = None, limit: int = None):
 		selector = {"by": "family", "values": family}
 		if footage:
-			selector["footage"] = footage
+			selector["footage"] = int(footage)
 		if limit:
 			selector["limit"] = limit
 			selector["limit_method"] = "first"
@@ -207,7 +207,7 @@ class RegistrationEngine:
 	def disengage_family_all(self, family: str, footage: str = None):
 		selector = {"by": "family", "values": family}
 		if footage:
-			selector["footage"] = footage
+			selector["footage"] = int(footage)
 		self.apply_selector(None, selector, action="disengage", manuals=all_manuals)
 
 	def apply_combination(
