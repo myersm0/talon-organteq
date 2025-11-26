@@ -185,6 +185,8 @@ class PrologClient:
 		elif by == "family":
 			family = selector["values"]
 			footage = selector.get("footage", "any")
+			if footage != "any":
+				footage = int(footage)  # ensure integer for Prolog
 			limit = selector.get("limit")
 			method = selector.get("limit_method", "first")
 			if limit:

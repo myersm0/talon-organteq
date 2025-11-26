@@ -49,15 +49,11 @@ ctx.lists["self.organteq_tonal_family"] = {
 
 mod.list("organteq_footage", desc="Standard organ stop footages")
 ctx.lists["self.organteq_footage"] = {
-	"thirty two foot": "32'",
-	"sixteen foot": "16'",
-	"eight foot": "8'",
-	"five and a third foot": "5'1/3",
-	"four foot": "4'",
-	"two and two thirds foot": "2'2/3",
-	"two foot": "2'",
-	"one and three fifths foot": "1'3/5",
-	"one and a third foot": "1'1/3",
-	"one foot": "1'",
+	"thirty two foot": "32",
+	"sixteen foot": "16",
+	"eight foot": "8",
+	"four foot": "4",
+	"two foot": "2",
+	"one foot": "1",
 }
 
