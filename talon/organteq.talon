@@ -130,37 +130,3 @@ app: /organteq/i
 	user.organteq_sync()
 
 
-# ============================================================================
-# Organteq settings panels (keyboard shortcuts)
-# ============================================================================
-
-^settings [general]$:
-	key(u)
-
-^stops|stop settings$:
-	key(s)
-
-^tremulants|tremulant settings$:
-	key(t)
-
-^expression settings$:
-	key(x)
-
-^couplers|coupler settings$:
-	key(r)
-
-^combination settings$:
-	key(b)
-
-^crescendo settings$:
-	key(d)
-
-^tuning settings$:
-	key(g)
-
-^jam (view|settings)$:
-	key(j)
-
-^double jam [view|settings]$:
-	key(k)
-
