@@ -29,6 +29,9 @@
 % User-defined constraints and violations
 :- dynamic violation_rule/1.    % violation_rule(Head :- Body) - user can define these
 
+% Allow resolve_selector clauses to be non-contiguous (for readability)
+:- discontiguous resolve_selector/3.
+
 % ============================================================================
 % Stop classification predicates
 % ============================================================================
