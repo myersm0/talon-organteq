@@ -5,6 +5,16 @@ The provided voice command-mappings for optional use with Talon are documented [
 
 Organteq is a trademark of Modartt. This project is not affiliated with or endorsed by Modartt.
 
+***Status note***: This repo has been considerably refactored and reimagined since v0.1. The forthcoming v0.2, in progress, introduces an additional dependency on the Prolog logic programming language, but with the benefit of offering a much more capable reasoning engine than I had previously in pure Python. However, there are still some bugs that I'm working out with the Talon integration. Check back soon.
+
+## Motivation
+Traditionally, organ registration involves manipulating stops at either a very fine or a very coarse granularity: either via individual stops, or via activation of pre-recorded combinations which must be planned in advance and which affect organ state globally (typically across all manuals).
+
+The system prototyped in this repo introduces a different way. You can still manipulate stops individually. But you can also group them in arbitrary ways and manipulate each of those groups as units: mix them together, subtract one from another, layer them conditionally on top of each other, etc, or even introduce nondeterministic elements (randomness). Anything that can be expressed logically in terms of known properties of the state of your organ in Organteq, you can express it with these tools.
+
+This system is driven by formal logic, specifically by the reasoning tool called Prolog. While this is not a new concept, recent advances in voice recognition technology make it newly practical in application here.
+
+
 ## Prerequisites
 Requires [SWI-Prolog](https://www.swi-prolog.org). On a Mac with Homebrew you can install it like this:
 ```
