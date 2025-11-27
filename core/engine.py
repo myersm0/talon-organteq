@@ -210,20 +210,72 @@ class RegistrationEngine:
 			selector["footage"] = int(footage)
 		self.apply_selector(None, selector, action="disengage", manuals=all_manuals)
 
-	def apply_combination(
+	def apply_rule(
 		self,
-		combination_id: str,
+		rule_id: str,
+		delta: int = None,
+		level: int = None,
+		action: str = None,
+		manuals: list[str] = None
+	):
+		if manuals is None:
+			manuals = all_manuals
+		metadata = self.prolog.get_rule_metadata(rule_id)
+		if not metadata:
+			print(f"Rule '{rule_id}' not found")
+			return
+
+		rule_type = metadata.get("type")
+
+		if action == "mute":
+			if rule_type == "persistent":
+				self._apply_persistent_rule(rule_id, level=0, manuals=manuals)
+			else:
+				self.rule_levels[rule_id] = 0
+				if metadata.get("antonym"):
+					self.rule_levels[metadata["antonym"]] = 0
+			self._save_snapshot(f"rule:{rule_id}:mute")
+			return
+
+		if action == "solo":
+			self._solo_rule(rule_id, manuals)
+			return
+
+		if action == "reassert":
+			self._reassert_rule(rule_id, manuals)
+			return
+
+		if action == "maximize":
+			max_level = metadata.get("max_level", 1)
+			if rule_type == "persistent":
+				self._apply_persistent_rule(rule_id, level=max_level, manuals=manuals)
+			else:
+				self._apply_transient_rule(rule_id, target_level=max_level, manuals=manuals)
+			return
+
+		if action == "minimize":
+			if rule_type == "persistent":
+				self._apply_persistent_rule(rule_id, level=1, manuals=manuals)
+			else:
+				self._apply_transient_rule(rule_id, target_level=1, manuals=manuals)
+			return
+
+		if rule_type == "persistent":
+			self._apply_persistent_rule(rule_id, delta=delta, level=level, manuals=manuals)
+		else:
+			self._apply_transient_rule_delta(rule_id, delta=delta if delta is not None else 1, manuals=manuals)
+
+	def _apply_persistent_rule(
+		self,
+		rule_id: str,
 		delta: int = None,
 		level: int = None,
 		manuals: list[str] = None
 	):
 		if manuals is None:
 			manuals = all_manuals
-		metadata = self.prolog.get_rule_metadata(combination_id)
-		if metadata.get("type") != "persistent":
-			print(f"'{combination_id}' is not a persistent rule")
-			return
-		current_level = self.combination_levels.get(combination_id, 0)
+		metadata = self.prolog.get_rule_metadata(rule_id)
+		current_level = self.combination_levels.get(rule_id, 0)
 		max_level = metadata.get("max_level", 1)
 
 		if level is not None:
@@ -237,73 +289,22 @@ class RegistrationEngine:
 			return
 
 		actions = self.prolog.get_combination_delta_actions(
-			combination_id, current_level, target_level, manuals
+			rule_id, current_level, target_level, manuals
 		)
-		self.combination_levels[combination_id] = target_level
-		self.prolog.set_combination_level(combination_id, target_level)
+		self.combination_levels[rule_id] = target_level
+		self.prolog.set_combination_level(rule_id, target_level)
 		self._execute_actions(actions)
-		self._save_snapshot(f"combination:{combination_id}:level:{target_level}")
+		self._save_snapshot(f"rule:{rule_id}:level:{target_level}")
 
-	def reassert_combination(self, combination_id: str, manuals: list[str] = None):
-		if manuals is None:
-			manuals = all_manuals
-		current_level = self.combination_levels.get(combination_id, 0)
-		if current_level == 0:
-			return
-		actions = self.prolog.get_reassert_actions(combination_id, manuals)
-		self._execute_actions(actions)
-		self._save_snapshot(f"reassert:{combination_id}")
-
-	def solo_combination(self, combination_id: str, manuals: list[str] = None):
-		if manuals is None:
-			manuals = all_manuals
-		current_level = self.combination_levels.get(combination_id, 0)
-		if current_level == 0:
-			return
-		combo_stops = {}
-		for manual in manuals:
-			stops = self.prolog.get_combination_stops(combination_id, current_level, manual)
-			combo_stops[manual] = set(str(s) for s in stops)
-		for manual in manuals:
-			manual_num = manual_numbers[manual]
-			max_stops = max_stops_per_manual[manual_num]
-			for s in range(1, max_stops + 1):
-				stop_str = str(s)
-				if stop_str in combo_stops[manual]:
-					self._execute_action("engage", manual, stop_str)
-				else:
-					self._execute_action("disengage", manual, stop_str)
-		self._save_snapshot(f"solo:{combination_id}")
-
-	def minimize_combination(self, combination_id: str, manuals: list[str] = None):
-		self.apply_combination(combination_id, level=1, manuals=manuals)
-
-	def maximize_combination(self, combination_id: str, manuals: list[str] = None):
-		if manuals is None:
-			manuals = all_manuals
-		metadata = self.prolog.get_rule_metadata(combination_id)
-		max_level = metadata.get("max_level", 1)
-		self.apply_combination(combination_id, level=max_level, manuals=manuals)
-
-	def mute_combination(self, combination_id: str, manuals: list[str] = None):
-		self.apply_combination(combination_id, level=0, manuals=manuals)
-
-	def apply_rule(self, rule_id: str, delta: int = 1, manuals: list[str] = None):
-		if manuals is None:
-			manuals = all_manuals
+	def _apply_transient_rule_delta(self, rule_id: str, delta: int, manuals: list[str]):
 		metadata = self.prolog.get_rule_metadata(rule_id)
-		if not metadata:
-			print(f"Rule '{rule_id}' not found")
-			return
-		if metadata.get("type") == "persistent":
-			self.apply_combination(rule_id, delta=delta, manuals=manuals)
-			return
 		antonym = metadata.get("antonym")
 		max_level = metadata.get("max_level", 10)
 		current_level = self.rule_levels.get(rule_id, 0)
 		antonym_level = self.rule_levels.get(antonym, 0) if antonym else 0
 		combined = current_level - antonym_level
 		new_combined = combined + delta
+
 		if antonym:
 			if new_combined > 0:
 				target_level = min(new_combined, max_level)
@@ -330,11 +331,91 @@ class RegistrationEngine:
 			self.rule_levels[rule_id] = new_level
 		self._save_snapshot(f"rule:{rule_id}:delta:{delta}")
 
+	def _apply_transient_rule(self, rule_id: str, target_level: int, manuals: list[str]):
+		current_level = self.rule_levels.get(rule_id, 0)
+		if target_level > current_level:
+			for level in range(current_level + 1, target_level + 1):
+				self._apply_rule_level(rule_id, level, manuals, "engage")
+		self.rule_levels[rule_id] = target_level
+		self._save_snapshot(f"rule:{rule_id}:level:{target_level}")
+
 	def _apply_rule_level(self, rule_id: str, level: int, manuals: list[str], action: str):
 		for manual in manuals:
 			stops = self.prolog.get_rule_stops(rule_id, level, manual)
 			for stop in stops:
 				self._execute_action(action, manual, str(stop))
+
+	def _reassert_rule(self, rule_id: str, manuals: list[str]):
+		metadata = self.prolog.get_rule_metadata(rule_id)
+		if metadata.get("type") == "persistent":
+			current_level = self.combination_levels.get(rule_id, 0)
+			if current_level == 0:
+				return
+			actions = self.prolog.get_reassert_actions(rule_id, manuals)
+			self._execute_actions(actions)
+		else:
+			current_level = self.rule_levels.get(rule_id, 0)
+			for level in range(1, current_level + 1):
+				self._apply_rule_level(rule_id, level, manuals, "engage")
+		self._save_snapshot(f"reassert:{rule_id}")
+
+	def _solo_rule(self, rule_id: str, manuals: list[str]):
+		metadata = self.prolog.get_rule_metadata(rule_id)
+		if metadata.get("type") == "persistent":
+			current_level = self.combination_levels.get(rule_id, 0)
+		else:
+			current_level = self.rule_levels.get(rule_id, 0)
+		if current_level == 0:
+			return
+		rule_stops = {}
+		for manual in manuals:
+			stops = self.prolog.get_combination_stops(rule_id, current_level, manual)
+			rule_stops[manual] = set(str(s) for s in stops)
+		for manual in manuals:
+			manual_num = manual_numbers[manual]
+			max_stops = max_stops_per_manual[manual_num]
+			for s in range(1, max_stops + 1):
+				stop_str = str(s)
+				if stop_str in rule_stops[manual]:
+					self._execute_action("engage", manual, stop_str)
+				else:
+					self._execute_action("disengage", manual, stop_str)
+		self._save_snapshot(f"solo:{rule_id}")
+
+	# Convenience methods that delegate to apply_rule
+	def reassert_rule(self, rule_id: str, manuals: list[str] = None):
+		self.apply_rule(rule_id, action="reassert", manuals=manuals)
+
+	def solo_rule(self, rule_id: str, manuals: list[str] = None):
+		self.apply_rule(rule_id, action="solo", manuals=manuals)
+
+	def minimize_rule(self, rule_id: str, manuals: list[str] = None):
+		self.apply_rule(rule_id, action="minimize", manuals=manuals)
+
+	def maximize_rule(self, rule_id: str, manuals: list[str] = None):
+		self.apply_rule(rule_id, action="maximize", manuals=manuals)
+
+	def mute_rule(self, rule_id: str, manuals: list[str] = None):
+		self.apply_rule(rule_id, action="mute", manuals=manuals)
+
+	# Legacy aliases for backwards compatibility
+	def apply_combination(self, combination_id: str, delta: int = None, level: int = None, manuals: list[str] = None):
+		self.apply_rule(combination_id, delta=delta, level=level, manuals=manuals)
+
+	def reassert_combination(self, combination_id: str, manuals: list[str] = None):
+		self.apply_rule(combination_id, action="reassert", manuals=manuals)
+
+	def solo_combination(self, combination_id: str, manuals: list[str] = None):
+		self.apply_rule(combination_id, action="solo", manuals=manuals)
+
+	def minimize_combination(self, combination_id: str, manuals: list[str] = None):
+		self.apply_rule(combination_id, action="minimize", manuals=manuals)
+
+	def maximize_combination(self, combination_id: str, manuals: list[str] = None):
+		self.apply_rule(combination_id, action="maximize", manuals=manuals)
+
+	def mute_combination(self, combination_id: str, manuals: list[str] = None):
+		self.apply_rule(combination_id, action="mute", manuals=manuals)
 
 	def undo(self):
 		if self.history_index > 0:

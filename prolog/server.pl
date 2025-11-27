@@ -81,6 +81,7 @@ stops_by_family(Manual, Family, Footage, Stops) :-
 		matches_footage(Manual, Number, Footage)
 	), Stops).
 
+% Basic selectors
 resolve_selector(_, numbers(Numbers), Numbers) :- !.
 
 resolve_selector(Manual, family(Family), Stops) :-
@@ -98,6 +99,42 @@ resolve_selector(Manual, names(Names), Stops) :-
 		member(Name, Names),
 		stop(Manual, Number, Name, stop)
 	), Stops), !.
+
+% Currently engaged stops
+resolve_selector(Manual, engaged, Stops) :-
+	findall(Number, engaged(Manual, Number), Stops), !.
+
+% Compound selectors: set operations
+resolve_selector(Manual, union(Selectors), Stops) :-
+	findall(S, (
+		member(Sel, Selectors),
+		resolve_selector(Manual, Sel, SelStops),
+		member(S, SelStops)
+	), AllStops),
+	sort(AllStops, Stops), !.
+
+resolve_selector(Manual, intersection(Selectors), Stops) :-
+	Selectors = [First|Rest],
+	resolve_selector(Manual, First, FirstStops),
+	foldl(intersect_selector(Manual), Rest, FirstStops, Stops), !.
+
+intersect_selector(Manual, Selector, AccStops, Result) :-
+	resolve_selector(Manual, Selector, SelStops),
+	intersection(AccStops, SelStops, Result).
+
+resolve_selector(Manual, difference(Base, Subtract), Stops) :-
+	resolve_selector(Manual, Base, BaseStops),
+	resolve_selector(Manual, Subtract, SubStops),
+	subtract(BaseStops, SubStops, Stops), !.
+
+% Raw Prolog expression selector
+% Usage: expression(N, Goal) where Goal uses N as the stop number variable
+resolve_selector(Manual, expression(Goal), Stops) :-
+	findall(N, (
+		stop(Manual, N, _, stop),
+		call(Goal, Manual, N)
+	), AllStops),
+	sort(AllStops, Stops), !.
 
 apply_limit(Stops, Limit, first, Limited) :-
 	length(Stops, Len),

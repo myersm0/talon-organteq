@@ -112,6 +112,56 @@ class TestSelectors(unittest.TestCase):
 		})
 		self.assertEqual(sorted(stops), [1, 2])
 
+	def test_selector_engaged(self):
+		self.p.set_engaged("great", 2, True)
+		self.p.set_engaged("great", 4, True)
+		stops = self.p.resolve_selector("great", {"by": "engaged"})
+		self.assertEqual(sorted(stops), [2, 4])
+
+	def test_selector_union(self):
+		stops = self.p.resolve_selector("great", {
+			"by": "union",
+			"values": [
+				{"by": "family", "values": "reed"},
+				{"by": "family", "values": "mixture"}
+			]
+		})
+		self.assertEqual(sorted(stops), [4, 5, 6, 7])
+
+	def test_selector_intersection(self):
+		self.p.set_engaged("great", 4, True)
+		self.p.set_engaged("great", 5, True)
+		stops = self.p.resolve_selector("great", {
+			"by": "intersection",
+			"values": [
+				{"by": "family", "values": "reed"},
+				{"by": "engaged"}
+			]
+		})
+		self.assertEqual(stops, [4])
+
+	def test_selector_difference(self):
+		stops = self.p.resolve_selector("great", {
+			"by": "difference",
+			"base": {"by": "numbers", "values": [1, 2, 3, 4, 5]},
+			"subtract": {"by": "family", "values": "reed"}
+		})
+		self.assertEqual(sorted(stops), [1, 2, 3, 5])
+
+	def test_selector_nested_compound(self):
+		stops = self.p.resolve_selector("great", {
+			"by": "difference",
+			"base": {
+				"by": "union",
+				"values": [
+					{"by": "family", "values": "reed"},
+					{"by": "family", "values": "mixture"}
+				]
+			},
+			"subtract": {"by": "numbers", "values": [4]}
+		})
+		self.assertEqual(sorted(stops), [5, 6, 7])
+
 
 class TestRuleMetadata(unittest.TestCase):
 	@classmethod

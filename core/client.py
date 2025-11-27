@@ -185,8 +185,6 @@ class PrologClient:
 		elif by == "family":
 			family = selector["values"]
 			footage = selector.get("footage", "any")
-			if footage != "any":
-				footage = int(footage)  # ensure integer for Prolog
 			limit = selector.get("limit")
 			method = selector.get("limit_method", "first")
 			if limit:
@@ -199,6 +197,23 @@ class PrologClient:
 			names = selector["values"]
 			escaped = [f"'{n.replace(chr(39), chr(92) + chr(39))}'" for n in names]
 			return f"names([{', '.join(escaped)}])"
+		elif by == "engaged":
+			return "engaged"
+		elif by == "union":
+			sub_selectors = selector["values"]
+			terms = [self._dict_to_selector_term(s) for s in sub_selectors]
+			return f"union([{', '.join(terms)}])"
+		elif by == "intersection":
+			sub_selectors = selector["values"]
+			terms = [self._dict_to_selector_term(s) for s in sub_selectors]
+			return f"intersection([{', '.join(terms)}])"
+		elif by == "difference":
+			base = self._dict_to_selector_term(selector["base"])
+			subtract = self._dict_to_selector_term(selector["subtract"])
+			return f"difference({base}, {subtract})"
+		elif by == "expression":
+			expr = selector["values"]
+			return f"expression({expr})"
 		raise ValueError(f"Unknown selector type: {by}")
 
 	def _parse_actions(self, raw_actions: list) -> list[dict]:
