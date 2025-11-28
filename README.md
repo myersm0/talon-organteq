@@ -1,7 +1,7 @@
 # talon-organteq
 A powerful registration control system for Modartt's [Organteq 2](https://www.modartt.com/organteq_overview), built around an extensible and customizable rule-based grammar. Commands can be invoked either from a Python REPL session, by mapping them to switches on your MIDI controller, or with [Talon](https://talonvoice.com/) voice commands (which allows hands-free control).
 
-The provided voice command-mappings for optional use with Talon are documented [here](https://github.com/myersm0/talon-organteq/talon/README.md).
+The provided voice command-mappings for optional use with Talon are documented [here](talon/README.md).
 
 Organteq is a trademark of Modartt. This project is not affiliated with or endorsed by Modartt.
 
@@ -57,7 +57,7 @@ engine.redo()
 ```
 
 ## API reference
-The argument `manual` below should take on one of the following values: `pedal`, `choir`, `great`, or `swell`. See [docs/api-reference.md](https://github.com/myersm0/talon-organteq/docs/api-reference.md) for complete details.
+The argument `manual` below should take on one of the following values: `pedal`, `choir`, `great`, or `swell`. See [docs/api-reference.md](docs/api-reference.md) for complete details.
 
 ### Basic actions by manual and stop number
 ```python
