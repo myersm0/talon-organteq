@@ -37,7 +37,7 @@ If you want to use the voice commands, you will need to download and install [Ta
 swipl -g "consult('./prolog/server.pl'), consult('./prolog/classification.pl'), server(5000)."
 ```
 
-From here, you may now control Organteq either by Talon voice or from an interactive Python REPL session. The remainder of this document will describe usage in the Python REPL; see [here](https://github.com/myersm0/talon-organteq/talon/README.md) for documentation of the voice interface.
+From here, you may now control Organteq either by Talon voice or from an interactive Python REPL session. The remainder of this document will describe usage in the Python REPL; see [here](talon/README.md) for documentation of the voice interface.
 
 From Python:
 ```python
