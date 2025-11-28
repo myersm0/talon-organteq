@@ -28,10 +28,11 @@ class RegistrationEngine:
 	def load_rules(self):
 		if self.rules_dir and self.rules_dir.exists():
 			for pl_file in self.rules_dir.glob(self.rules_glob):
-				try:
-					self.prolog.load_file(str(pl_file))
-				except Exception as e:
-					print(f"Failed to load {pl_file}: {e}")
+				if pl_file.suffix == '.pl':
+					try:
+						self.prolog.load_file(str(pl_file))
+					except Exception as e:
+						print(f"Failed to load {pl_file}: {e}")
 
 	def sync_state(self, save_snapshot: bool = True):
 		info = get_stops_info()
@@ -87,17 +88,25 @@ class RegistrationEngine:
 			elif act == "release":
 				self.prolog.release_stops(action["combination"], action["manual"], [action["stop"]])
 
-	def engage(self, manual: str, stops: list[str]):
+	def _normalize_stops(self, stops) -> list[str]:
+		if isinstance(stops, (int, str)):
+			return [str(stops)]
+		return [str(s) for s in stops]
+
+	def engage(self, manual: str, stops):
+		stops = self._normalize_stops(stops)
 		for stop in stops:
 			self._execute_action("engage", manual, stop)
 		self._save_snapshot(f"engage:{manual}:{stops}")
 
-	def disengage(self, manual: str, stops: list[str]):
+	def disengage(self, manual: str, stops):
+		stops = self._normalize_stops(stops)
 		for stop in stops:
 			self._execute_action("disengage", manual, stop)
 		self._save_snapshot(f"disengage:{manual}:{stops}")
 
-	def toggle(self, manual: str, stops: list[str]):
+	def toggle(self, manual: str, stops):
+		stops = self._normalize_stops(stops)
 		for stop in stops:
 			if stop in self.state[manual]:
 				self._execute_action("disengage", manual, stop)
@@ -105,7 +114,8 @@ class RegistrationEngine:
 				self._execute_action("engage", manual, stop)
 		self._save_snapshot(f"toggle:{manual}:{stops}")
 
-	def solo(self, manual: str, stops: list[str]):
+	def solo(self, manual: str, stops):
+		stops = self._normalize_stops(stops)
 		manual_num = manual_numbers[manual]
 		max_stops = max_stops_per_manual[manual_num]
 		for s in range(1, max_stops + 1):
@@ -220,6 +230,7 @@ class RegistrationEngine:
 	):
 		if manuals is None:
 			manuals = all_manuals
+		
 		metadata = self.prolog.get_rule_metadata(rule_id)
 		if not metadata:
 			print(f"Rule '{rule_id}' not found")
