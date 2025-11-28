@@ -30,6 +30,8 @@
 :- dynamic violation_rule/1.    % violation_rule(Head :- Body) - user can define these
 
 % Allow resolve_selector clauses to be non-contiguous (for readability)
+% (also allow multifile to allow users to specify their own)
+:- multifile resolve_selector/3.
 :- discontiguous resolve_selector/3.
 
 % ============================================================================
