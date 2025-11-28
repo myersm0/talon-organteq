@@ -59,7 +59,7 @@ engine.redo()
 ```
 
 ## API reference
-The argument `manual` below should take on one of the following values: `pedal`, `choir`, `great`, or `swell`. See [docs/api-reference.md](https://github.com/myersm0/talon-organteq/docs/api-reference.md) for complete details.
+The argument `manual` below should take on one of the following values: `pedal`, `choir`, `great`, or `swell`. See [docs/api-reference.md](docs/api-reference.md) for complete details.
 
 ### Basic actions by manual and stop number
 ```python
