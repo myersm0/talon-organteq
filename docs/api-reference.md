@@ -41,15 +41,15 @@ engine.clear(manual)
 ```
 **Parameters:**
 - `manual`: string — the manual name
-- `stops`: list of strings — stop numbers (e.g., `["1", "2", "3"]`)
+- `stops`: list of stop numbers (e.g., `[1, 2, 3]`)
 
 **Examples:**
 ```python
-engine.engage("great", ["1", "2", "3"])      # engage stops 1, 2, 3
-engine.disengage("great", ["2"])             # disengage stop 2
-engine.toggle("swell", ["4", "5"])           # flip states of 4 and 5
-engine.solo("great", ["1", "6"])             # only 1 and 6 engaged, all others off
-engine.clear("pedal")                        # all pedal stops off
+engine.engage("great", [1, 2, 3])      # engage stops 1, 2, 3
+engine.disengage("great", 2)           # disengage stop 2
+engine.toggle("swell", [4, 5])         # flip states of 4 and 5
+engine.solo("great", [1, 6])           # only 1 and 6 engaged, all others off
+engine.clear("pedal")                  # all pedal stops off
 ```
 
 ### By Tonal Family
@@ -181,9 +181,9 @@ engine.apply_selector("great", {
 
 ## Rules
 
-Rules are named, multi-level registration presets defined in Prolog. The unified `apply_rule` method works for both persistent and transient rules.
+Rules are named, multi-level registration presets defined in Prolog.
 
-### apply_rule (unified interface)
+### apply_rule
 
 ```python
 engine.apply_rule(rule_id, delta=None, level=None, action=None, manuals=None)
@@ -225,22 +225,9 @@ engine.solo_rule(rule_id, manuals=None)
 engine.reassert_rule(rule_id, manuals=None)
 ```
 
-### Legacy aliases
-
-For backwards compatibility, combination-specific methods still work:
-
-```python
-engine.apply_combination(rule_id, delta=None, level=None, manuals=None)
-engine.mute_combination(rule_id, manuals=None)
-engine.minimize_combination(rule_id, manuals=None)
-engine.maximize_combination(rule_id, manuals=None)
-engine.solo_combination(rule_id, manuals=None)
-engine.reassert_combination(rule_id, manuals=None)
-```
-
 ### Rule types
 
-**Persistent rules** track ownership of stops. Multiple persistent rules can engage the same stop; that stop will stay engaged until all persistent rules have released it. (Unless you disengage it yourself manually or via a application of a non-persistent (transient) rule.)
+**Persistent rules** track ownership of stops. If multiple persistent rules engage the same stop, that stop will stay engaged until all such rules have released it. (Unless you disengage it yourself manually or via a application of a non-persistent (transient) rule.)
 
 **Transient rules** are one-time, stateless transformations. They modify state but don't track ownership.
 
