@@ -59,10 +59,9 @@ engine.redo()
 ```
 
 ## API reference
-The argument `manual` below should take on one of the following values: `pedal`, `choir`, `great`, or `swell`.
+The argument `manual` below should take on one of the following values: `pedal`, `choir`, `great`, or `swell`. See [docs/api-reference.md](https://github.com/myersm0/talon-organteq/docs/api-reference.md) for complete details.
 
 ### Basic actions by manual and stop number
-
 ```python
 engine.engage(manual, stops)
 engine.disengage(manual, stops)
@@ -72,7 +71,6 @@ engine.clear(manual)
 ```
 
 ### Basic actions by manual and tonal family
-
 ```python
 engine.engage_family(manual, family, footage=None, limit=None)
 engine.disengage_family(manual, family, footage=None, limit=None)
@@ -83,26 +81,32 @@ engine.disengage_family_all(family, footage=None)
 ```
 
 ### Selector operations
-
 ```python
-engine.apply_selector(manual, selector, action="engage", manuals=[manuals])
+engine.apply_selector(manual, selector, action="engage", manuals=None)
 ```
 
 ### Rules
-#### Transient rules
+The unified `apply_rule` interface works for both transient and persistent rules:
 ```python
-engine.apply_rule(rule_id, delta=1, manuals=None)
+engine.apply_rule(rule_id, delta=None, level=None, action=None, manuals=None)
 ```
 
-#### Persistent rules (combinations)
+Level operations:
 ```python
-engine.apply_combination(rule_id, delta=None, level=None, manuals=None)
-engine.reassert_combination(rule_id, manuals=None)
-engine.solo_combination(rule_id, manuals=None)
-engine.minimize_combination(rule_id, manuals=None)
-engine.maximize_combination(rule_id, manuals=None)
-engine.mute_combination(rule_id, manuals=None)
+engine.apply_rule(rule_id, delta=1)       # Increment level
+engine.apply_rule(rule_id, delta=-1)      # Decrement level
+engine.apply_rule(rule_id, level=2)       # Set absolute level
 ```
+
+Action operations:
+```python
+engine.apply_rule(rule_id, action="mute")      # Level 0
+engine.apply_rule(rule_id, action="minimize")  # Level 1
+engine.apply_rule(rule_id, action="maximize")  # Max level
+engine.apply_rule(rule_id, action="solo")      # Only this rule's stops
+engine.apply_rule(rule_id, action="reassert")  # Re-engage at current level
+```
+
 
 ### History
 ```python
