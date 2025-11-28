@@ -25,14 +25,18 @@ current_manual = "great" # todo: not acceptable
 def get_engine():
 	global engine
 	if engine is None:
-		engine = RegistrationEngine(
-			prolog_host="localhost",
-			prolog_port=5000,
-			rules_dir=settings.get("user.talon_organteq_rules_dir"),
-			rules_glob=settings.get("user.talon_organteq_rules_glob"),
-		)
-		engine.load_rules()
-		engine.sync_state()
+		try:
+			engine = RegistrationEngine(
+				prolog_host="localhost",
+				prolog_port=5000,
+				rules_dir=settings.get("user.talon_organteq_rules_dir"),
+				rules_glob=settings.get("user.talon_organteq_rules_glob"),
+			)
+			engine.load_rules()
+			engine.sync_state()
+		except Exception as e:
+			print(f"Failed to initialize engine: {e}")
+			engine = None
 	return engine
 
 @mod.action_class

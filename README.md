@@ -5,8 +5,6 @@ The provided voice command-mappings for optional use with Talon are documented [
 
 Organteq is a trademark of Modartt. This project is not affiliated with or endorsed by Modartt.
 
-***Status note***: This repo has been considerably refactored and reimagined since v0.1. The forthcoming v0.2, in progress, introduces an additional dependency on the Prolog logic programming language, but with the benefit of offering a much more capable reasoning engine than I had previously in pure Python. However, there are still some bugs that I'm working out with the Talon integration. Check back soon.
-
 ## Motivation
 Traditionally, organ registration involves manipulating stops at either a very fine or a very coarse granularity: either via individual stops, or via activation of pre-recorded combinations which must be planned in advance and which affect organ state globally (typically across all manuals).
 

@@ -1,6 +1,6 @@
 from pathlib import Path
-from core.client import PrologClient
-from core.organteq_api import (
+from .client import PrologClient
+from .organteq_api import (
 	get_stops_info, manual_names, manual_numbers,
 	max_stops_per_manual, get_current_preset, set_stop
 )
