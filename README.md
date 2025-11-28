@@ -10,18 +10,18 @@ Traditionally, organ registration involves manipulating stops at either a very f
 
 The system prototyped in this repo introduces a different way. You can still manipulate stops individually. But you can also group them in arbitrary ways and manipulate each of those groups as units: mix them together, subtract one from another, layer them conditionally on top of each other, etc, or even introduce nondeterministic elements. Anything that can be expressed logically in terms of known properties of the state of your organ in Organteq, you can express it with these tools.
 
-This system is driven by _formal logic_, specifically by the reasoning tool called Prolog. While this is not a new concept, recent advances in voice recognition technology make it newly practical in application here.
+This system is driven by _formal logic_, specifically by the reasoning tool called Prolog. While Prolog is not new, recent advances in voice recognition technology make it newly practical in application here.
 
 
 ## Prerequisites
-Requires [SWI-Prolog](https://www.swi-prolog.org). On a Mac with Homebrew you can install it like this:
+Requires [SWI-Prolog](https://www.swi-prolog.org). On a Mac with Homebrew you can install Prolog like this:
 ```
 brew install swi-prolog
 ```
 
 ## Installation
 ```bash
-git clone https://github.com/myersm0/talon-organteq```
+git clone https://github.com/myersm0/talon-organteq
 pip install requests
 ```
 If you want to use the voice commands, you will need to download and install [Talon](https://talonvoice.com). Some advanced features require access to Talon's paid-tier beta, but most functionality here will work in the free version.
@@ -112,6 +112,14 @@ engine.undo()
 engine.redo()
 ```
 
+## Tips for setting up voice recognition
+If you're going to use this repo with Talon voice, which is highly recommended, you should be aware of some inherent difficulties in getting good results from any setup like this in which you're trying to issue _voice commands_ while playing a potentially loud musical instrument. If you're using headphones, then you may be OK. But if you aren't, then you have two problems to solve in your setup:
+1. How to avoid false positives from the speech recognition engine (i.e. sounds from the organ being spuriously picked up as voice commands)
+2. How to ensure your spoken commands are clearly audible over the sound from Organteq
+
+To get around these things, you probably need a high-end directional headset mic that can effectively isolate your voice from environmental noise (and music), such as the DPA d:fine 4188 or 4288.
+
+Your choice of speech recognition engine within Talon also matters. For example, the Conformer D2 engine (unfortunately available in Talon beta only) may do better at reducing false positives.
 
 ## License
 MIT
