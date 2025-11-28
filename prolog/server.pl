@@ -251,6 +251,7 @@ violations(Vs) :-
 :- http_handler(root(retract), handle_retract, []).
 :- http_handler(root(reset), handle_reset, []).
 :- http_handler(root(load), handle_load, []).
+:- http_handler('/load', handle_load, []).
 
 server(Port) :-
 	http_server(http_dispatch, [port(Port)]).
