@@ -1,20 +1,20 @@
 # talon-organteq
-A powerful registration control system for Modartt's [Organteq 2](https://www.modartt.com/organteq_overview), built around an extensible and customizable rule-based grammar. Commands can be invoked either from a Python REPL session, by mapping them to switches on your MIDI controller, or with [Talon](https://talonvoice.com/) voice commands (which allows hands-free control).
+A powerful registration control system for Modartt's [Organteq 2](https://www.modartt.com/organteq_overview), built around an extensible rule-based grammar. Commands can be invoked from a Python session, by mapping them to switches on your MIDI controller, or with [Talon](https://talonvoice.com/) voice commands for hands-free control.
 
-The provided voice command-mappings for optional use with Talon are documented [here](talon/README.md).
+Voice command documentation is available at [talon/README.md](talon/README.md).
 
 Organteq is a trademark of Modartt. This project is not affiliated with or endorsed by Modartt.
 
 ## Motivation
 Traditionally, organ registration involves manipulating stops at either a very fine or a very coarse granularity: either via individual stops, or via activation of pre-recorded combinations which must be planned in advance and which affect organ state globally (typically across all manuals).
 
-The system prototyped in this repo introduces a different way. You can still manipulate stops individually. But you can also group them in arbitrary ways and manipulate each of those groups as units: mix them together, subtract one from another, layer them conditionally on top of each other, etc, or even introduce nondeterministic elements. Anything that can be expressed logically in terms of known properties of the state of your organ in Organteq, you can express it with these tools.
+The system prototyped in this repo introduces a different way. You can still manipulate stops individually. But you can also group them in arbitrary ways and manipulate each of those groups as units: mix them together, subtract one from another, layer them conditionally on top of each other, etc. Anything that can be expressed logically in terms of known properties of the state of your organ in Organteq, you can express it with these tools.
 
 This system is driven by _formal logic_, specifically by the reasoning tool called Prolog. While Prolog is not new, recent advances in voice recognition technology make it newly practical in application here.
 
 
 ## Prerequisites
-Requires [SWI-Prolog](https://www.swi-prolog.org). On a Mac with Homebrew you can install Prolog like this:
+Requires [SWI-Prolog](https://www.swi-prolog.org). On a Mac with Homebrew:
 ```
 brew install swi-prolog
 ```
@@ -27,90 +27,42 @@ pip install requests
 If you want to use the voice commands, you will need to download and install [Talon](https://talonvoice.com). Some advanced features require access to Talon's paid-tier beta, but most functionality here will work in the free version.
 
 ## Getting started
-1. Start Organteq with JSON-RPC server. On a Mac that will look like this:
+1. Start Organteq with JSON-RPC server. On a Mac:
 ```bash
 /Applications/Organteq\ 2/Organteq\ 2.app/Contents/MacOS/Organteq\ 2 --serve
 ```
 
-2. Start a Prolog server by navigating into the directory where you cloned `talon-organteq` and then:
+2. Start the Prolog server:
 ```bash
-swipl -g "consult('./prolog/server.pl'), server(5000)."
+cd prolog
+swipl -g "consult('main.pl'), server(5000)."
 ```
 
-From here, you may now control Organteq either by Talon voice or from an interactive Python REPL session. The remainder of this document will describe usage in the Python REPL; see [here](talon/README.md) for documentation of the voice interface.
-
-From Python:
+3. From Python:
 ```python
-from core import RegistrationEngine
+from client import Bridge
 
-engine = RegistrationEngine()
-engine.sync_state()
+bridge = Bridge()
+bridge.sync()
 
-# Basic stop control
-engine.engage("great", ["1", "2", "3"])
-engine.engage_family("great", "reed")
-engine.solo_family("great", "principal")
+# basic stop control
+bridge.engage("great", [1, 2, 3])
+bridge.disengage("great", [2])
+bridge.toggle("swell", [1, 4])
+bridge.solo("great", [1, 6])
+bridge.clear("pedal")
 
-# Undo/redo
-engine.undo()
-engine.redo()
+# control by tonal family
+bridge.engage_family("great", "reed")
+bridge.engage_family("great", "principal", footage=8)
+bridge.disengage_family("swell", "mixture")
+
+# undo/redo
+bridge.undo()
+bridge.redo()
 ```
 
-## API reference
-The argument `manual` below should take on one of the following values: `pedal`, `choir`, `great`, or `swell`. See [docs/api-reference.md](docs/api-reference.md) for complete details.
-
-### Basic actions by manual and stop number
-```python
-engine.engage(manual, stops)
-engine.disengage(manual, stops)
-engine.toggle(manual, stops)
-engine.solo(manual, stops)
-engine.clear(manual)
-```
-
-### Basic actions by manual and tonal family
-```python
-engine.engage_family(manual, family, footage=None, limit=None)
-engine.disengage_family(manual, family, footage=None, limit=None)
-engine.toggle_family(manual, family, footage=None, limit=None)
-engine.solo_family(manual, family, footage=None)
-engine.engage_family_all(family, footage=None, limit=None)
-engine.disengage_family_all(family, footage=None)
-```
-
-### Selector operations
-```python
-engine.apply_selector(manual, selector, action="engage", manuals=None)
-```
-
-### Rules
-The unified `apply_rule` interface works for both transient and persistent rules:
-```python
-engine.apply_rule(rule_id, delta=None, level=None, action=None, manuals=None)
-```
-
-Level operations:
-```python
-engine.apply_rule(rule_id, delta=1)       # Increment level
-engine.apply_rule(rule_id, delta=-1)      # Decrement level
-engine.apply_rule(rule_id, level=2)       # Set absolute level
-```
-
-Action operations:
-```python
-engine.apply_rule(rule_id, action="mute")      # Level 0
-engine.apply_rule(rule_id, action="minimize")  # Level 1
-engine.apply_rule(rule_id, action="maximize")  # Max level
-engine.apply_rule(rule_id, action="solo")      # Only this rule's stops
-engine.apply_rule(rule_id, action="reassert")  # Re-engage at current level
-```
-
-
-### History
-```python
-engine.undo()
-engine.redo()
-```
+From here, you may control Organteq either from Python or via Talon voice. See [talon/README.md](talon/README.md) for the voice interface.
 
 ## Tips for setting up voice recognition
 If you're going to use this repo with Talon voice, which is highly recommended, you should be aware of some inherent difficulties in getting good results from any setup like this in which you're trying to issue _voice commands_ while playing a potentially loud musical instrument. If you're using headphones, then you may be OK. But if you aren't, then you have two problems to solve in your setup:
@@ -123,6 +75,3 @@ Your choice of speech recognition engine within Talon also matters. For example,
 
 ## License
 MIT
-
-
-
