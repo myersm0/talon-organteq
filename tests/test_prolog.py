@@ -2,7 +2,7 @@
 test_prolog.py - Integration tests for the Prolog server
 
 Requires: Prolog server running on port 5000 with rules_example.pl loaded
-Start server: cd prolog && swipl -g "consult('main.pl'), load_rules_from_dir('.', 'rules_example.pl'), server(5000)."
+Start server: cd prolog && swipl -g "consult('main.pl'), load_rules_from_dir('../examples', 'rules.pl'), server(5000)."
 Run tests: python -m unittest tests.test_prolog -v
 """
 
