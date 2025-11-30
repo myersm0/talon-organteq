@@ -250,3 +250,23 @@ class PrologClient:
 				args = v.get("args", [])
 				violations.append({"type": functor, "args": args})
 		return violations
+
+	def resolve_coupler(self, preset: str, source: str, destination: str, transposition: str = "unison") -> int | None:
+		response = requests.post(f"{self.base_url}/resolve_coupler", json={
+			"preset": preset,
+			"source": source,
+			"destination": destination,
+			"transposition": transposition
+		})
+		result = response.json()
+		if result.get("status") == "ok":
+			return result.get("index")
+		return None
+
+	def resolve_mono_coupler(self, query: str) -> int | None:
+		response = requests.post(f"{self.base_url}/resolve_mono_coupler", json={"query": query})
+		result = response.json()
+		if result.get("status") == "ok":
+			return result.get("index")
+		return None
+

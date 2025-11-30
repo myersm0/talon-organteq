@@ -125,3 +125,24 @@ def get_current_preset():
 	except (json.JSONDecodeError, KeyError, IndexError) as e:
 		print(f"Failed to get current preset: {e}")
 		return ""
+
+def set_coupler(index: int, value: float):
+	parameter_id = f"Coupler Switch[{index}]"
+	payload = {
+		"method": "setParameters",
+		"params": [{"id": parameter_id, "normalized_value": value}],
+		"jsonrpc": "2.0",
+		"id": 1
+	}
+	organteq_call(payload)
+
+def set_mono_coupler(index: int, value: float):
+	parameter_id = f"Mono Coupler Switch[{index}]"
+	payload = {
+		"method": "setParameters",
+		"params": [{"id": parameter_id, "normalized_value": value}],
+		"jsonrpc": "2.0",
+		"id": 1
+	}
+	organteq_call(payload)
+

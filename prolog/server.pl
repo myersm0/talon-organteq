@@ -6,6 +6,8 @@
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_parameters)).
 
+:- use_module(couplers).
+
 % ============================================================================
 % Dynamic predicates - all state managed by Python client
 % ============================================================================
@@ -316,6 +318,8 @@ violations(Vs) :-
 :- http_handler(root(reset), handle_reset, []).
 :- http_handler(root(load), handle_load, []).
 :- http_handler('/load', handle_load, []).
+:- http_handler('/resolve_coupler', handle_resolve_coupler, []).
+:- http_handler('/resolve_mono_coupler', handle_resolve_mono_coupler, []).
 
 server(Port) :-
 	http_server(http_dispatch, [port(Port)]).
@@ -374,6 +378,27 @@ handle_load(Request) :-
 			reply_json_dict(_{status: error, message: ErrorStr})
 		)
 	).
+
+handle_resolve_coupler(Request) :-
+	http_read_json_dict(Request, Dict),
+	atom_string(Preset, Dict.preset),
+	atom_string(Source, Dict.source),
+	atom_string(Destination, Dict.destination),
+	atom_string(Transposition, Dict.transposition),
+	(   resolve_coupler(Preset, Source, Destination, Transposition, Index)
+	->  Reply = _{status: ok, index: Index}
+	;   Reply = _{status: error, message: "Coupler not found"}
+	),
+	reply_json_dict(Reply).
+
+handle_resolve_mono_coupler(Request) :-
+	http_read_json_dict(Request, Dict),
+	atom_string(Query, Dict.query),
+	(   resolve_mono_coupler(Query, Index)
+	->  Reply = _{status: ok, index: Index}
+	;   Reply = _{status: error, message: "Mono coupler not found"}
+	),
+	reply_json_dict(Reply).
 
 % ============================================================================
 % JSON serialization

@@ -2,7 +2,8 @@ from pathlib import Path
 from .client import PrologClient
 from .organteq_api import (
 	get_stops_info, manual_names, manual_numbers,
-	max_stops_per_manual, get_current_preset, set_stop
+	max_stops_per_manual, get_current_preset, set_stop,
+	set_coupler, set_mono_coupler
 )
 
 all_manuals = ["pedal", "choir", "great", "swell"]
@@ -474,3 +475,44 @@ class RegistrationEngine:
 
 	def push_family(self, manual: str, family: str, footage: str = None):
 		self.disengage_family(manual, family, footage)
+
+	def couple(self, source, destination=None, transposition="unison"):
+		index = self.prolog.resolve_coupler(self.current_preset, source, destination, transposition)
+		if index:
+			set_coupler(index, 1.0)
+			self._save_snapshot(f"couple:{source}:{destination}:{transposition}")
+		else:
+			print(f"Coupler not found: {source} to {destination} ({transposition})")
+
+	def decouple(self, source, destination=None, transposition="unison"):
+		index = self.prolog.resolve_coupler(self.current_preset, source, destination, transposition)
+		if index:
+			set_coupler(index, 0.0)
+			self._save_snapshot(f"decouple:{source}:{destination}:{transposition}")
+		else:
+			print(f"Coupler not found: {source} to {destination} ({transposition})")
+
+	def couple_mono(self, coupler):
+		index = self.prolog.resolve_mono_coupler(str(coupler))
+		if index:
+			set_mono_coupler(index, 1.0)
+			self._save_snapshot(f"couple_mono:{coupler}")
+		else:
+			print(f"Mono coupler '{coupler}' not found")
+
+	def decouple_mono(self, coupler):
+		index = self.prolog.resolve_mono_coupler(str(coupler))
+		if index:
+			set_mono_coupler(index, 0.0)
+			self._save_snapshot(f"decouple_mono:{coupler}")
+		else:
+			print(f"Mono coupler '{coupler}' not found")
+
+	def decouple_all(self):
+		for i in range(1, 7):
+			set_coupler(i, 0.0)
+		for i in range(1, 5):
+			set_mono_coupler(i, 0.0)
+		self._save_snapshot("decouple_all")
+
+
