@@ -218,40 +218,40 @@ class TestPersistentRules(unittest.TestCase):
 		sync_test_state()
 
 	def test_apply_rule_level(self):
-		result = execute("apply_rule", {"rule": "alpha", "level": 1})
+		result = execute("apply_rule", {"rule": "my persistent rule #1", "level": 1})
 		self.assertEqual(result["status"], "ok")
 		self.assertEqual(get_engaged(result, "great"), [1, 2, 3])
 		self.assertEqual(get_engaged(result, "swell"), [1, 2])
 
 	def test_apply_rule_level_2_cumulative(self):
-		result = execute("apply_rule", {"rule": "alpha", "level": 2})
+		result = execute("apply_rule", {"rule": "my persistent rule #1", "level": 2})
 		self.assertEqual(result["status"], "ok")
 		self.assertEqual(get_engaged(result, "great"), [1, 2, 3, 4])
 		self.assertEqual(get_engaged(result, "pedal"), [1, 2])
 
 	def test_apply_rule_delta(self):
-		execute("apply_rule", {"rule": "alpha", "level": 1})
-		result = execute("apply_rule", {"rule": "alpha", "delta": 1})
+		execute("apply_rule", {"rule": "my persistent rule #1", "level": 1})
+		result = execute("apply_rule", {"rule": "my persistent rule #1", "delta": 1})
 		self.assertEqual(result["status"], "ok")
-		self.assertEqual(get_rule_level(result, "alpha"), 2)
+		self.assertEqual(get_rule_level(result, "my persistent rule #1"), 2)
 
 	def test_apply_rule_mute(self):
-		execute("apply_rule", {"rule": "alpha", "level": 2})
-		result = execute("apply_rule", {"rule": "alpha", "action": "mute"})
+		execute("apply_rule", {"rule": "my persistent rule #1", "level": 2})
+		result = execute("apply_rule", {"rule": "my persistent rule #1", "action": "mute"})
 		self.assertEqual(result["status"], "ok")
 		self.assertEqual(get_engaged(result, "great"), [])
-		self.assertEqual(get_rule_level(result, "alpha"), 0)
+		self.assertEqual(get_rule_level(result, "my persistent rule #1"), 0)
 
 	def test_apply_rule_maximize(self):
-		result = execute("apply_rule", {"rule": "alpha", "action": "maximize"})
+		result = execute("apply_rule", {"rule": "my persistent rule #1", "action": "maximize"})
 		self.assertEqual(result["status"], "ok")
-		self.assertEqual(get_rule_level(result, "alpha"), 3)
+		self.assertEqual(get_rule_level(result, "my persistent rule #1"), 3)
 
 	def test_apply_rule_minimize(self):
-		execute("apply_rule", {"rule": "alpha", "level": 3})
-		result = execute("apply_rule", {"rule": "alpha", "action": "minimize"})
+		execute("apply_rule", {"rule": "my persistent rule #1", "level": 3})
+		result = execute("apply_rule", {"rule": "my persistent rule #1", "action": "minimize"})
 		self.assertEqual(result["status"], "ok")
-		self.assertEqual(get_rule_level(result, "alpha"), 1)
+		self.assertEqual(get_rule_level(result, "my persistent rule #1"), 1)
 
 
 class TestOwnership(unittest.TestCase):
@@ -259,17 +259,17 @@ class TestOwnership(unittest.TestCase):
 		sync_test_state()
 
 	def test_shared_ownership_prevents_disengage(self):
-		execute("apply_rule", {"rule": "alpha", "level": 1})
-		execute("apply_rule", {"rule": "bravo", "level": 1})
-		result = execute("apply_rule", {"rule": "alpha", "action": "mute"})
+		execute("apply_rule", {"rule": "my persistent rule #1", "level": 1})
+		execute("apply_rule", {"rule": "my persistent rule #2", "level": 1})
+		result = execute("apply_rule", {"rule": "my persistent rule #1", "action": "mute"})
 		self.assertEqual(result["status"], "ok")
 		engaged = get_engaged(result, "great")
 		self.assertIn(1, engaged)
 		self.assertIn(2, engaged)
 
 	def test_last_owner_releases(self):
-		execute("apply_rule", {"rule": "alpha", "level": 1})
-		result = execute("apply_rule", {"rule": "alpha", "action": "mute"})
+		execute("apply_rule", {"rule": "my persistent rule #1", "level": 1})
+		result = execute("apply_rule", {"rule": "my persistent rule #1", "action": "mute"})
 		self.assertEqual(result["status"], "ok")
 		self.assertEqual(get_engaged(result, "great"), [])
 
@@ -337,23 +337,23 @@ class TestMultiRuleOwnership(unittest.TestCase):
 	def test_overlapping_rules_ownership(self):
 		# Alpha level 1 engages great [1,2,3], swell [1,2]
 		# Bravo level 1 engages great [1,2], swell reed
-		execute("apply_rule", {"rule": "alpha", "level": 1})
-		execute("apply_rule", {"rule": "bravo", "level": 1})
+		execute("apply_rule", {"rule": "my persistent rule #1", "level": 1})
+		execute("apply_rule", {"rule": "my persistent rule #2", "level": 1})
 		
-		# Mute alpha - stops 1,2 should stay (bravo owns them)
-		result = execute("apply_rule", {"rule": "alpha", "action": "mute"})
+		# Mute "my persistent rule #1" - stops 1,2 should stay (my persistent rule #2 owns them)
+		result = execute("apply_rule", {"rule": "my persistent rule #1", "action": "mute"})
 		great_engaged = get_engaged(result, "great")
 		self.assertIn(1, great_engaged)
 		self.assertIn(2, great_engaged)
-		self.assertNotIn(3, great_engaged)  # Only alpha owned this
+		self.assertNotIn(3, great_engaged)  # Only my persistent rule #1 owned this
 
 	def test_last_owner_releases_all(self):
-		execute("apply_rule", {"rule": "alpha", "level": 1})
-		execute("apply_rule", {"rule": "bravo", "level": 1})
-		execute("apply_rule", {"rule": "alpha", "action": "mute"})
+		execute("apply_rule", {"rule": "my persistent rule #1", "level": 1})
+		execute("apply_rule", {"rule": "my persistent rule #2", "level": 1})
+		execute("apply_rule", {"rule": "my persistent rule #1", "action": "mute"})
 		
-		# Now mute bravo - everything should clear
-		result = execute("apply_rule", {"rule": "bravo", "action": "mute"})
+		# Now mute "my persistent rule #2" - everything should clear
+		result = execute("apply_rule", {"rule": "my persistent rule #2", "action": "mute"})
 		great_engaged = get_engaged(result, "great")
 		self.assertEqual(great_engaged, [])
 
@@ -398,3 +398,4 @@ class TestTremulant(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+

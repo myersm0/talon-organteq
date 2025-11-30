@@ -4,8 +4,8 @@
 % Load with: load_rules_from_dir('/path/to/rules', '*.pl')
 %
 % Rule types:
+%   transient  - simple stateless operations
 %   persistent - tracks ownership, cumulative levels
-%   transient  - fire-and-forget, no ownership tracking
 %
 % Divisions:
 %   manuals: pedal, choir, great, swell
@@ -50,34 +50,33 @@ state:rule_selector(add_reeds, 1, family(reed, any, 1, first)).
 state:rule_selector(add_reeds, 2, family(reed)).
 
 % ============================================================================
-% Persistent rules (combinations)
+% Persistent rules
 % ============================================================================
 
-% alpha - foundation combination building from soft to full
-state:rule(alpha, persistent).
-state:max_level(alpha, 3).
+% my persistent rule #1 - foundation combination building from soft to full
+state:rule('my persistent rule #1', persistent).
+state:max_level('my persistent rule #1', 3).
 
-state:rule_selector(alpha, 1, great, numbers([1, 2, 3])).
-state:rule_selector(alpha, 1, swell, numbers([1, 2])).
+state:rule_selector('my persistent rule #1', 1, great, numbers([1, 2, 3])).
+state:rule_selector('my persistent rule #1', 1, swell, numbers([1, 2])).
 
-state:rule_selector(alpha, 2, pedal, numbers([1, 2])).
-state:rule_selector(alpha, 2, great, numbers([4])).
+state:rule_selector('my persistent rule #1', 2, pedal, numbers([1, 2])).
+state:rule_selector('my persistent rule #1', 2, great, numbers([4])).
 
-state:rule_selector(alpha, 3, great, family(reed, any, 1, first)).
+state:rule_selector('my persistent rule #1', 3, great, family(reed, any, 1, first)).
 
-% bravo - reed-heavy combination
-state:rule(bravo, persistent).
-state:max_level(bravo, 2).
+% my persistent rule #2 - reed-heavy combination
+state:rule('my persistent rule #2', persistent).
+state:max_level('my persistent rule #2', 2).
 
-state:rule_selector(bravo, 1, great, numbers([1, 2])).
-state:rule_selector(bravo, 1, swell, family(reed, any, 1, first)).
-state:rule_selector(bravo, 2, great, family(reed)).
+state:rule_selector('my persistent rule #2', 1, great, numbers([1, 2])).
+state:rule_selector('my persistent rule #2', 1, swell, family(reed, any, 1, first)).
+state:rule_selector('my persistent rule #2', 2, great, family(reed)).
 
 % ============================================================================
 % Persistent rules with auxiliaries (couplers, tremulants)
 % ============================================================================
 
-% full_organ - a comprehensive registration including couplers
 % Use with: apply_rule("full_organ", divisions=all) or explicit list
 state:rule(full_organ, persistent).
 state:max_level(full_organ, 4).
@@ -107,3 +106,4 @@ state:rule_selector(solo_reed, 1, swell, family(reed, 8, 1, first)).
 state:rule_selector(solo_reed, 1, swell, family(flute, 8, 1, first)).
 
 state:rule_selector(solo_reed, 2, tremulant, numbers([1])).
+
