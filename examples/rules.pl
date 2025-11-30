@@ -4,8 +4,8 @@
 % Load with: load_rules_from_dir('/path/to/rules', '*.pl')
 %
 % Rule types:
-%   transient  - simple stateless operations
 %   persistent - tracks ownership, cumulative levels
+%   transient  - fire-and-forget, no ownership tracking
 %
 % Divisions:
 %   manuals: pedal, choir, great, swell
@@ -25,6 +25,7 @@
 :- multifile state:antonym/2.
 :- multifile state:rule_selector/3.
 :- multifile state:rule_selector/4.
+:- multifile state:rule_selector/5.
 
 % ============================================================================
 % Transient rules
@@ -34,14 +35,16 @@ state:rule(brighten, transient).
 state:rule(darken, transient).
 state:antonym(brighten, darken).
 state:antonym(darken, brighten).
-state:max_level(brighten, 3).
-state:max_level(darken, 3).
+state:max_level(brighten, 1).
+state:max_level(darken, 1).
 
-% brighten: add mixtures and mutations progressively (applies to all targeted divisions)
-state:rule_selector(brighten, 1, family(mixture, any, 1, first)).
-state:rule_selector(brighten, 2, family(mixture)).
-state:rule_selector(brighten, 3, family(mixture)).
-state:rule_selector(brighten, 3, family(mutation)).
+% brighten: engage mixtures and mutations
+state:rule_selector(brighten, 1, all, family(mixture), engage).
+state:rule_selector(brighten, 1, all, family(mutation), engage).
+
+% darken: disengage mixtures and mutations (inverse of brighten)
+state:rule_selector(darken, 1, all, family(mixture), disengage).
+state:rule_selector(darken, 1, all, family(mutation), disengage).
 
 state:rule(add_reeds, transient).
 state:max_level(add_reeds, 2).
@@ -50,10 +53,10 @@ state:rule_selector(add_reeds, 1, family(reed, any, 1, first)).
 state:rule_selector(add_reeds, 2, family(reed)).
 
 % ============================================================================
-% Persistent rules
+% Persistent rules (combinations)
 % ============================================================================
 
-% my persistent rule #1 - foundation combination building from soft to full
+% 'my persistent rule #1' - foundation combination building from soft to full
 state:rule('my persistent rule #1', persistent).
 state:max_level('my persistent rule #1', 3).
 
@@ -65,7 +68,7 @@ state:rule_selector('my persistent rule #1', 2, great, numbers([4])).
 
 state:rule_selector('my persistent rule #1', 3, great, family(reed, any, 1, first)).
 
-% my persistent rule #2 - reed-heavy combination
+% 'my persistent rule #2' - reed-heavy combination
 state:rule('my persistent rule #2', persistent).
 state:max_level('my persistent rule #2', 2).
 
@@ -77,6 +80,7 @@ state:rule_selector('my persistent rule #2', 2, great, family(reed)).
 % Persistent rules with auxiliaries (couplers, tremulants)
 % ============================================================================
 
+% full_organ - a comprehensive registration including couplers
 % Use with: apply_rule("full_organ", divisions=all) or explicit list
 state:rule(full_organ, persistent).
 state:max_level(full_organ, 4).
@@ -106,4 +110,3 @@ state:rule_selector(solo_reed, 1, swell, family(reed, 8, 1, first)).
 state:rule_selector(solo_reed, 1, swell, family(flute, 8, 1, first)).
 
 state:rule_selector(solo_reed, 2, tremulant, numbers([1])).
-

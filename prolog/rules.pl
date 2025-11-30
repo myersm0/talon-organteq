@@ -10,7 +10,7 @@
 
 :- use_module(state, [
 	element/4, engaged/2, rule/2, max_level/2, antonym/2,
-	rule_selector/3, rule_selector/4,
+	rule_selector/3, rule_selector/4, rule_selector/5,
 	do_engage/2, do_disengage/2,
 	claim/3, release/3, still_owned_after_release/3,
 	get_rule_level/2, set_rule_level/2,
@@ -23,19 +23,39 @@
 % Rule element computation
 % ============================================================================
 
-% rule_selector can be:
-%   rule_selector(RuleId, Level, Division, Selector) - specific division
-%   rule_selector(RuleId, Level, Selector) - applies to any targeted division (3-arg form)
+% rule_selector forms:
+%   rule_selector(RuleId, Level, Selector) - all divisions, engage (default)
+%   rule_selector(RuleId, Level, Division, Selector) - specific division, engage (default)
+%   rule_selector(RuleId, Level, Division, Selector, Action) - full form with action
 
+% For persistent rules, we just need the elements (always engage)
 rule_elements_at_level(RuleId, Level, Division, Elements) :-
 	findall(E, (
-		(   rule_selector(RuleId, Level, Div, Selector), (Div = Division ; Div = all)
-		;   rule_selector(RuleId, Level, Selector)
-		),
+		get_selector_for_level(RuleId, Level, Division, Selector, _),
 		resolve_selector(Division, Selector, LevelElements),
 		member(E, LevelElements)
 	), All),
 	sort(All, Elements).
+
+% For transient rules, we need element-action pairs
+rule_element_actions_at_level(RuleId, Level, Division, ElementActions) :-
+	findall(E-Action, (
+		get_selector_for_level(RuleId, Level, Division, Selector, Action),
+		resolve_selector(Division, Selector, LevelElements),
+		member(E, LevelElements)
+	), All),
+	sort(All, ElementActions).
+
+% Unified selector lookup - returns Selector and Action for a given rule/level/division
+get_selector_for_level(RuleId, Level, Division, Selector, Action) :-
+	rule_selector(RuleId, Level, Div, Selector, Action),
+	(Div = Division ; Div = all).
+get_selector_for_level(RuleId, Level, Division, Selector, Action) :-
+	rule_selector(RuleId, Level, Div, Selector),
+	(Div = Division ; Div = all),
+	Action = engage.
+get_selector_for_level(RuleId, Level, _, Selector, engage) :-
+	rule_selector(RuleId, Level, Selector).
 
 rule_elements_cumulative(RuleId, MaxLevel, Division, Elements) :-
 	findall(E, (
@@ -184,50 +204,37 @@ rpc_action_for_type(tremulant, _, Number, Value, set_tremulant(Number, Value)).
 % Transient rule application
 % ============================================================================
 
+% Transient rules are stateless - just apply all selectors once
+apply_transient_rule(RuleId, Divisions, Actions) :-
+	max_level(RuleId, MaxLevel),
+	findall(Action, (
+		between(1, MaxLevel, L),
+		member(Div, Divisions),
+		rule_element_actions_at_level(RuleId, L, Div, ElementActions),
+		member(N-SelectorAction, ElementActions),
+		apply_element_action(Div, N, SelectorAction, Action)
+	), Actions).
+
+% Legacy level-based entry points now just apply the rule
 apply_transient_rule_to_level(RuleId, TargetLevel, Divisions, Actions) :-
-	get_rule_level(RuleId, CurrentLevel),
-	(TargetLevel > CurrentLevel ->
-		findall(Action, (
-			between(1, TargetLevel, L),
-			L > CurrentLevel,
-			member(Div, Divisions),
-			rule_elements_at_level(RuleId, L, Div, Elements),
-			member(N, Elements),
-			do_engage(Div, N),
-			rpc_action(Div, N, 1.0, Action)
-		), Actions)
+	(TargetLevel > 0 ->
+		apply_transient_rule(RuleId, Divisions, Actions)
 	;   Actions = []
-	),
-	set_rule_level(RuleId, TargetLevel).
+	).
 
 apply_transient_rule_delta(RuleId, Delta, Divisions, Actions) :-
-	(antonym(RuleId, Antonym) ->
-		apply_transient_with_antonym(RuleId, Antonym, Delta, Divisions, Actions)
-	;   get_rule_level(RuleId, Current),
-		max_level(RuleId, MaxLevel),
-		NewLevel is max(0, min(Current + Delta, MaxLevel)),
-		apply_transient_rule_to_level(RuleId, NewLevel, Divisions, Actions)
+	(Delta > 0 ->
+		apply_transient_rule(RuleId, Divisions, Actions)
+	;   Actions = []
 	).
 
-apply_transient_with_antonym(RuleId, Antonym, Delta, Divisions, Actions) :-
-	get_rule_level(RuleId, RuleLevel),
-	get_rule_level(Antonym, AntonymLevel),
-	Combined is RuleLevel - AntonymLevel,
-	NewCombined is Combined + Delta,
-	max_level(RuleId, RuleMax),
-	max_level(Antonym, AntonymMax),
-	(NewCombined > 0 ->
-		TargetLevel is min(NewCombined, RuleMax),
-		apply_transient_rule_to_level(RuleId, TargetLevel, Divisions, Actions),
-		set_rule_level(Antonym, 0)
-	; NewCombined < 0 ->
-		TargetLevel is min(abs(NewCombined), AntonymMax),
-		apply_transient_rule_to_level(Antonym, TargetLevel, Divisions, Actions),
-		set_rule_level(RuleId, 0)
-	;   set_rule_level(RuleId, 0),
-		set_rule_level(Antonym, 0),
-		Actions = []
-	).
+% Apply the action specified in the selector
+apply_element_action(Div, N, engage, Action) :-
+	do_engage(Div, N),
+	rpc_action(Div, N, 1.0, Action).
+apply_element_action(Div, N, disengage, Action) :-
+	do_disengage(Div, N),
+	rpc_action(Div, N, 0.0, Action).
 
 % ============================================================================
 % Solo and reassert

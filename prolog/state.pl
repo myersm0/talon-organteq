@@ -18,6 +18,7 @@
 	antonym/2,
 	rule_selector/3,
 	rule_selector/4,
+	rule_selector/5,
 	% Divisions
 	manual/1,
 	auxiliary/1,
@@ -62,14 +63,16 @@ json_to_atom(Value, Atom) :-
 :- dynamic rule/2.              % rule(Id, Type) - persistent | transient
 :- dynamic max_level/2.         % max_level(RuleId, MaxLevel)
 :- dynamic antonym/2.           % antonym(RuleId, AntonymId)
-:- dynamic rule_selector/3.     % rule_selector(RuleId, Level, Selector)
-:- dynamic rule_selector/4.     % rule_selector(RuleId, Level, Division, Selector)
+:- dynamic rule_selector/3.     % rule_selector(RuleId, Level, Selector) - all divisions, engage
+:- dynamic rule_selector/4.     % rule_selector(RuleId, Level, Division, Selector) - specific division, engage
+:- dynamic rule_selector/5.     % rule_selector(RuleId, Level, Division, Selector, Action) - full form
 
 :- multifile rule/2.
 :- multifile max_level/2.
 :- multifile antonym/2.
 :- multifile rule_selector/3.
 :- multifile rule_selector/4.
+:- multifile rule_selector/5.
 
 :- dynamic rule_level/2.        % rule_level(RuleId, CurrentLevel)
 :- dynamic owns/3.              % owns(RuleId, Division, Number)
