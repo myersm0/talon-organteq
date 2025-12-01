@@ -20,7 +20,7 @@
 	reset_history/0, save_snapshot/1, restore_snapshot/2, get_current_state/1,
 	json_to_atom/2, get_dict/4
 ]).
-:- use_module(selectors, [resolve_selector/3, dict_to_selector/2]).
+:- use_module(selectors, [resolve_selector/3, dict_to_selector/2, rules_for_preset/2]).
 :- use_module(rules, [apply_rule_impl/5, rule_divisions/2]).
 
 :- discontiguous execute_command/4.
@@ -206,6 +206,15 @@ execute_command(retract_facts, Args, [], State) :-
 		retractall(Fact)
 	)),
 	get_current_state(State).
+
+% --- list_rules (for preset or current) ---
+execute_command(list_rules, Args, [], State) :-
+	(get_dict(preset, Args, PresetRaw) ->
+		json_to_atom(PresetRaw, Preset)
+	;   current_preset(Preset)
+	),
+	rules_for_preset(Preset, Rules),
+	State = _{rules: Rules, preset: Preset}.
 
 % ============================================================================
 % Helper predicates

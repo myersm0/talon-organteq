@@ -8,8 +8,11 @@
 	apply_rule_impl/5
 ]).
 
+:- use_module(library(apply), [partition/4]).
+
 :- use_module(state, [
-	element/4, engaged/2, rule/2, max_level/2, antonym/2,
+	element/4, engaged/2, current_preset/1,
+	rule/2, max_level/2, antonym/2,
 	rule_predicate/1, rule_action/2,
 	rule_selector/3, rule_selector/4, rule_selector/5,
 	do_engage/2, do_disengage/2,
@@ -18,7 +21,7 @@
 	manuals/1, auxiliaries/1, all_divisions/1,
 	json_to_atom/2
 ]).
-:- use_module(selectors, [resolve_selector/3]).
+:- use_module(selectors, [resolve_selector/3, preset_matches/2]).
 
 % ============================================================================
 % Rule divisions inference
@@ -62,11 +65,16 @@ expand_division(Div, Div) :-
 %   rule_selector(RuleId, Level, Selector) - all divisions, engage (default)
 %   rule_selector(RuleId, Level, Division, Selector) - specific division, engage (default)
 %   rule_selector(RuleId, Level, Division, Selector, Action) - full form with action
+%
+% Selectors can be wrapped with for_preset(Pattern, InnerSelector) to make them
+% preset-specific. If any preset-specific selectors match the current preset,
+% universal selectors are ignored.
 
 % For persistent rules, we just need the elements (always engage)
 rule_elements_at_level(RuleId, Level, Division, Elements) :-
+	get_prioritized_selectors(RuleId, Level, Division, Selectors),
 	findall(E, (
-		get_selector_for_level(RuleId, Level, Division, Selector, _),
+		member(Selector-_, Selectors),
 		resolve_selector(Division, Selector, LevelElements),
 		member(E, LevelElements)
 	), All),
@@ -74,12 +82,32 @@ rule_elements_at_level(RuleId, Level, Division, Elements) :-
 
 % For transient rules, we need element-action pairs
 rule_element_actions_at_level(RuleId, Level, Division, ElementActions) :-
+	get_prioritized_selectors(RuleId, Level, Division, Selectors),
 	findall(E-Action, (
-		get_selector_for_level(RuleId, Level, Division, Selector, Action),
+		member(Selector-Action, Selectors),
 		resolve_selector(Division, Selector, LevelElements),
 		member(E, LevelElements)
 	), All),
 	sort(All, ElementActions).
+
+% Collect all selectors, then prioritize preset-specific over universal
+get_prioritized_selectors(RuleId, Level, Division, Selectors) :-
+	findall(Sel-Act, get_selector_for_level(RuleId, Level, Division, Sel, Act), AllSelectors),
+	current_preset(Preset),
+	partition(is_matching_preset_selector(Preset), AllSelectors, PresetSpecific, Universal),
+	(PresetSpecific \= [] ->
+		Selectors = PresetSpecific
+	;   Selectors = Universal
+	).
+
+is_matching_preset_selector(Preset, Selector-_) :-
+	uses_for_preset(Selector),
+	selector_matches_preset(Selector, Preset).
+
+uses_for_preset(for_preset(_, _)) :- !.
+
+selector_matches_preset(for_preset(Pattern, _), Preset) :-
+	preset_matches(Preset, Pattern).
 
 % Unified selector lookup - returns Selector and Action for a given rule/level/division
 get_selector_for_level(RuleId, Level, Division, Selector, Action) :-

@@ -79,10 +79,14 @@ state:rule_selector(add_reeds, 2, family(reed)).
 % ============================================================================
 
 % 'my persistent rule #1' - foundation combination building from soft to full
+% This demonstrates preset-specific selectors with universal fallback
 state:rule('my persistent rule #1', persistent).
 state:max_level('my persistent rule #1', 3).
 
-state:rule_selector('my persistent rule #1', 1, great, numbers([1, 2, 3])).
+% Level 1: preset-specific numbers, with universal family-based fallback
+state:rule_selector('my persistent rule #1', 1, great, for_preset('Baroque*', numbers([1, 2, 3]))).
+state:rule_selector('my persistent rule #1', 1, great, for_preset('Romantic*', numbers([2, 4, 6]))).
+state:rule_selector('my persistent rule #1', 1, great, family(principal, 8)).  % universal fallback
 state:rule_selector('my persistent rule #1', 1, swell, numbers([1, 2])).
 
 state:rule_selector('my persistent rule #1', 2, pedal, numbers([1, 2])).

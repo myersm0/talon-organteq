@@ -250,6 +250,16 @@ class Bridge:
 			args["level"] = level
 		return self.execute("apply_rule", args)
 
+	def list_rules(self, preset: str = None) -> list[str]:
+		args = {}
+		if preset:
+			args["preset"] = preset
+		result = self.prolog.execute("list_rules", args)
+		if result.get("status") == "ok":
+			state = result.get("state", {})
+			return state.get("rules", [])
+		return []
+
 	def undo(self) -> dict:
 		return self.execute("undo", {})
 
