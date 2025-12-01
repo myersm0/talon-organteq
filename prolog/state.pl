@@ -42,6 +42,8 @@
 	save_snapshot/1,
 	restore_snapshot/2,
 	get_current_state/1,
+	% RPC actions
+	rpc_action/4,
 	% Helpers
 	json_to_atom/2,
 	get_dict/4
@@ -204,6 +206,10 @@ restore_state(state(EngagedList, RuleLevels, Ownership), Actions) :-
 rpc_action(Division, Number, Value, Action) :-
 	element(Division, Number, _, Type),
 	rpc_action_for_type(Type, Division, Number, Value, Action).
+rpc_action(Division, Number, _, _) :-
+	\+ element(Division, Number, _, _),
+	format(user_error, "Warning: rpc_action called for non-existent element ~w/~w~n", [Division, Number]),
+	fail.
 
 rpc_action_for_type(stop, Division, Number, Value, set_stop(Division, Number, Value)).
 rpc_action_for_type(coupler, _, Number, Value, set_coupler(Number, Value)).

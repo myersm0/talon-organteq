@@ -19,6 +19,7 @@
 	claim/3, release/3, still_owned_after_release/3,
 	get_rule_level/2, set_rule_level/2,
 	manuals/1, auxiliaries/1, all_divisions/1,
+	rpc_action/4,
 	json_to_atom/2
 ]).
 :- use_module(selectors, [resolve_selector/3, preset_matches/2]).
@@ -145,6 +146,13 @@ resolve_divisions(Single, [Div]) :-
 % Rule application implementation
 % ============================================================================
 
+% Error for unknown rules - must be first clause
+apply_rule_impl(RuleId, _, _, _, _) :-
+	\+ rule(RuleId, _),
+	\+ rule_predicate(RuleId),
+	!,
+	throw(error(unknown_rule(RuleId), context(apply_rule_impl/5, 'Rule does not exist'))).
+
 % Predicate-based rules bypass level/delta logic entirely
 apply_rule_impl(RuleId, _, _, _, Actions) :-
 	rule_predicate(RuleId),
@@ -265,16 +273,6 @@ compute_delta_actions(RuleId, [Div-Old|OldRest], [Div-New|NewRest], Actions) :-
 	), RemoveActions),
 	compute_delta_actions(RuleId, OldRest, NewRest, RestActions),
 	append([AddActions, ReassertActions, RemoveActions, RestActions], Actions).
-
-% RPC action (local copy, uses state module's element/4)
-rpc_action(Division, Number, Value, Action) :-
-	element(Division, Number, _, Type),
-	rpc_action_for_type(Type, Division, Number, Value, Action).
-
-rpc_action_for_type(stop, Division, Number, Value, set_stop(Division, Number, Value)).
-rpc_action_for_type(coupler, _, Number, Value, set_coupler(Number, Value)).
-rpc_action_for_type(mono_coupler, _, Number, Value, set_mono_coupler(Number, Value)).
-rpc_action_for_type(tremulant, _, Number, Value, set_tremulant(Number, Value)).
 
 % ============================================================================
 % Transient rule application

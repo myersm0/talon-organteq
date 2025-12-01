@@ -17,6 +17,7 @@
 	element_family/3, element_footage/3,
 	coupler_source/2, coupler_destination/2, coupler_transposition/2
 ]).
+:- use_module(library(apply), [include/3]).
 
 :- discontiguous resolve_selector/3.
 
@@ -38,17 +39,21 @@ preset_matches(Preset, Pattern) :-
 glob_to_regex(Glob, Regex) :-
 	string_chars(Glob, Chars),
 	escape_and_convert(Chars, RegexChars),
-	string_chars(RegexStr, RegexChars),
+	append(['^'], RegexChars, WithStart),
+	append(WithStart, ['$'], Anchored),
+	string_chars(RegexStr, Anchored),
 	atom_string(Regex, RegexStr).
 
 escape_and_convert([], []).
 escape_and_convert(['*'|T], ['.'|['*'|T2]]) :- escape_and_convert(T, T2).
+escape_and_convert(['?'|T], ['.'|T2]) :- escape_and_convert(T, T2).
 escape_and_convert([H|T], ['\\'|[H|T2]]) :-
-	member(H, ['.', '^', '$', '+', '?', '(', ')', '[', ']', '{', '}', '|', '\\']),
+	member(H, ['.', '^', '$', '+', '(', ')', '[', ']', '{', '}', '|', '\\']),
 	escape_and_convert(T, T2).
 escape_and_convert([H|T], [H|T2]) :-
 	H \= '*',
-	\+ member(H, ['.', '^', '$', '+', '?', '(', ')', '[', ']', '{', '}', '|', '\\']),
+	H \= '?',
+	\+ member(H, ['.', '^', '$', '+', '(', ')', '[', ']', '{', '}', '|', '\\']),
 	escape_and_convert(T, T2).
 
 % ============================================================================
@@ -105,7 +110,15 @@ resolve_selector(Division, for_preset(Pattern, InnerSelector), Elements) :-
 	;   Elements = []
 	), !.
 
-resolve_selector(_, numbers(Numbers), Numbers) :- !.
+resolve_selector(Division, numbers(Numbers), ValidElements) :-
+	include(valid_element(Division), Numbers, ValidElements),
+	findall(N, (member(N, Numbers), \+ element(Division, N, _, _)), Invalid),
+	(Invalid \= [] ->
+		format(user_error, "Warning: Invalid element numbers for ~w: ~w~n", [Division, Invalid])
+	;   true
+	), !.
+
+valid_element(Division, N) :- element(Division, N, _, _).
 
 resolve_selector(Division, all, Elements) :-
 	findall(N, element(Division, N, _, _), Elements), !.
