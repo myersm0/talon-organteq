@@ -64,6 +64,11 @@ bridge.redo()
 
 From here, you may control Organteq either from Python or via Talon voice. See [talon/README.md](talon/README.md) for the voice interface.
 
+## Documentation
+- [Python API reference](docs/api-reference.md) - Complete Bridge class documentation
+- [Advanced usage guide](docs/advanced-usage.md) - Selectors, rules, and customization
+- [Voice commands](talon/README.md) - Talon voice interface
+
 ## Tips for setting up voice recognition
 If you're going to use this repo with Talon voice, which is highly recommended, you should be aware of some inherent difficulties in getting good results from any setup like this in which you're trying to issue _voice commands_ while playing a potentially loud musical instrument. If you're using headphones, then you may be OK. But if you aren't, then you have two problems to solve in your setup:
 1. How to avoid false positives from the speech recognition engine (i.e. sounds from the organ being spuriously picked up as voice commands)
