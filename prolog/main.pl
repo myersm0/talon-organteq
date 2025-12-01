@@ -12,6 +12,7 @@
 :- use_module(rules).
 :- use_module(server, [execute/3, load_state/1, get_state/1]).
 :- use_module(couplers).
+:- use_module(helpers).
 
 % Export key predicates at top level
 server(Port) :- server:server(Port).

@@ -10,6 +10,7 @@
 
 :- use_module(state, [
 	element/4, engaged/2, rule/2, max_level/2, antonym/2,
+	rule_predicate/1, rule_action/2,
 	rule_selector/3, rule_selector/4, rule_selector/5,
 	do_engage/2, do_disengage/2,
 	claim/3, release/3, still_owned_after_release/3,
@@ -23,7 +24,11 @@
 % Rule divisions inference
 % ============================================================================
 
-% Infer target divisions from rule selectors:
+% For predicate-based rules, return empty list (predicate handles its own divisions)
+rule_divisions(RuleId, []) :-
+	rule_predicate(RuleId), !.
+
+% For selector-based rules, infer from selectors:
 % - 3-arg selectors (no division) -> all manuals
 % - 4-arg and 5-arg selectors -> explicit divisions (expand 'all')
 rule_divisions(RuleId, Divisions) :-
@@ -111,6 +116,12 @@ resolve_divisions(Single, [Div]) :-
 % ============================================================================
 % Rule application implementation
 % ============================================================================
+
+% Predicate-based rules bypass level/delta logic entirely
+apply_rule_impl(RuleId, _, _, _, Actions) :-
+	rule_predicate(RuleId),
+	!,
+	apply_predicate_rule(RuleId, Actions).
 
 apply_rule_impl(RuleId, mute, _, _, Actions) :-
 	rule(RuleId, Type),
@@ -241,8 +252,39 @@ rpc_action_for_type(tremulant, _, Number, Value, set_tremulant(Number, Value)).
 % Transient rule application
 % ============================================================================
 
-% Transient rules are stateless - just apply all selectors once
+% Transient rules: either predicate-based or selector-based
 apply_transient_rule(RuleId, Divisions, Actions) :-
+	(rule_predicate(RuleId) ->
+		apply_predicate_rule(RuleId, Actions)
+	;
+		apply_selector_based_transient(RuleId, Divisions, Actions)
+	).
+
+% Predicate-based rules: call rule_action/2, execute returned actions
+apply_predicate_rule(RuleId, RPCActions) :-
+	rule_action(RuleId, RawActions),
+	findall(RPCAction, (
+		member(Action, RawActions),
+		execute_rule_action(Action, RPCAction)
+	), RPCActions).
+
+execute_rule_action(engage(Div, N), RPCAction) :-
+	do_engage(Div, N),
+	rpc_action(Div, N, 1.0, RPCAction).
+execute_rule_action(disengage(Div, N), RPCAction) :-
+	do_disengage(Div, N),
+	rpc_action(Div, N, 0.0, RPCAction).
+execute_rule_action(toggle(Div, N), RPCAction) :-
+	(engaged(Div, N) ->
+		do_disengage(Div, N),
+		rpc_action(Div, N, 0.0, RPCAction)
+	;
+		do_engage(Div, N),
+		rpc_action(Div, N, 1.0, RPCAction)
+	).
+
+% Selector-based transient rules: apply all selectors once
+apply_selector_based_transient(RuleId, Divisions, Actions) :-
 	max_level(RuleId, MaxLevel),
 	findall(Action, (
 		between(1, MaxLevel, L),

@@ -16,6 +16,8 @@
 	rule/2,
 	max_level/2,
 	antonym/2,
+	rule_predicate/1,
+	rule_action/2,
 	rule_selector/3,
 	rule_selector/4,
 	rule_selector/5,
@@ -63,6 +65,8 @@ json_to_atom(Value, Atom) :-
 :- dynamic rule/2.              % rule(Id, Type) - persistent | transient
 :- dynamic max_level/2.         % max_level(RuleId, MaxLevel)
 :- dynamic antonym/2.           % antonym(RuleId, AntonymId)
+:- dynamic rule_predicate/1.    % rule_predicate(RuleId) - marks predicate-based rules
+:- dynamic rule_action/2.       % rule_action(RuleId, Actions) - predicate-based rule implementation
 :- dynamic rule_selector/3.     % rule_selector(RuleId, Level, Selector) - all divisions, engage
 :- dynamic rule_selector/4.     % rule_selector(RuleId, Level, Division, Selector) - specific division, engage
 :- dynamic rule_selector/5.     % rule_selector(RuleId, Level, Division, Selector, Action) - full form
@@ -70,6 +74,8 @@ json_to_atom(Value, Atom) :-
 :- multifile rule/2.
 :- multifile max_level/2.
 :- multifile antonym/2.
+:- multifile rule_predicate/1.
+:- multifile rule_action/2.
 :- multifile rule_selector/3.
 :- multifile rule_selector/4.
 :- multifile rule_selector/5.

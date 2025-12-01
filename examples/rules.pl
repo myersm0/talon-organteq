@@ -31,20 +31,42 @@
 % Transient rules
 % ============================================================================
 
+:- use_module(helpers).
+:- use_module(state, [manual/1]).
+
+:- multifile state:rule_predicate/1.
+:- multifile state:rule_action/2.
+
 state:rule(brighten, transient).
 state:rule(darken, transient).
 state:antonym(brighten, darken).
 state:antonym(darken, brighten).
-state:max_level(brighten, 1).
-state:max_level(darken, 1).
+state:rule_predicate(brighten).
+state:rule_predicate(darken).
 
-% brighten: engage mixtures and mutations
-state:rule_selector(brighten, 1, all, family(mixture), engage).
-state:rule_selector(brighten, 1, all, family(mutation), engage).
+% brighten: engage one disengaged mixture per manual; if none, one mutation
+state:rule_action(brighten, Actions) :-
+	findall(Action, (
+		manual(Div),
+		brighten_one(Div, Action)
+	), Actions).
 
-% darken: disengage mixtures and mutations (inverse of brighten)
-state:rule_selector(darken, 1, all, family(mixture), disengage).
-state:rule_selector(darken, 1, all, family(mutation), disengage).
+brighten_one(Div, engage(Div, N)) :-
+	helpers:first_disengaged_in_family(Div, mixture, N), !.
+brighten_one(Div, engage(Div, N)) :-
+	helpers:first_disengaged_in_family(Div, mutation, N), !.
+
+% darken: disengage one engaged mutation per manual; if none, one mixture
+state:rule_action(darken, Actions) :-
+	findall(Action, (
+		manual(Div),
+		darken_one(Div, Action)
+	), Actions).
+
+darken_one(Div, disengage(Div, N)) :-
+	helpers:last_engaged_in_family(Div, mutation, N), !.
+darken_one(Div, disengage(Div, N)) :-
+	helpers:last_engaged_in_family(Div, mixture, N), !.
 
 state:rule(add_reeds, transient).
 state:max_level(add_reeds, 2).
