@@ -4,8 +4,8 @@
 :- module(rules, [
 	rule_elements_at_level/4,
 	rule_elements_cumulative/4,
-	apply_rule_impl/6,
-	resolve_divisions/2
+	rule_divisions/2,
+	apply_rule_impl/5
 ]).
 
 :- use_module(state, [
@@ -18,6 +18,36 @@
 	json_to_atom/2
 ]).
 :- use_module(selectors, [resolve_selector/3]).
+
+% ============================================================================
+% Rule divisions inference
+% ============================================================================
+
+% Infer target divisions from rule selectors:
+% - 3-arg selectors (no division) -> all manuals
+% - 4-arg and 5-arg selectors -> explicit divisions (expand 'all')
+rule_divisions(RuleId, Divisions) :-
+	findall(Div, rule_selector_division(RuleId, Div), AllDivs),
+	sort(AllDivs, Divisions).
+
+rule_selector_division(RuleId, Div) :-
+	rule_selector(RuleId, _, _),
+	manuals(Manuals),
+	member(Div, Manuals).
+
+rule_selector_division(RuleId, Div) :-
+	rule_selector(RuleId, _, DivSpec, _),
+	expand_division(DivSpec, Div).
+
+rule_selector_division(RuleId, Div) :-
+	rule_selector(RuleId, _, DivSpec, _, _),
+	expand_division(DivSpec, Div).
+
+expand_division(all, Div) :-
+	manuals(Manuals),
+	member(Div, Manuals).
+expand_division(Div, Div) :-
+	Div \= all.
 
 % ============================================================================
 % Rule element computation
@@ -82,42 +112,48 @@ resolve_divisions(Single, [Div]) :-
 % Rule application implementation
 % ============================================================================
 
-apply_rule_impl(RuleId, mute, _, _, Divisions, Actions) :-
+apply_rule_impl(RuleId, mute, _, _, Actions) :-
 	rule(RuleId, Type),
+	rule_divisions(RuleId, Divisions),
 	(Type = persistent ->
 		apply_persistent_rule_to_level(RuleId, 0, Divisions, Actions)
 	;   set_rule_level(RuleId, 0),
 		Actions = []
 	).
 
-apply_rule_impl(RuleId, maximize, _, _, Divisions, Actions) :-
+apply_rule_impl(RuleId, maximize, _, _, Actions) :-
 	max_level(RuleId, MaxLevel),
 	rule(RuleId, Type),
+	rule_divisions(RuleId, Divisions),
 	(Type = persistent ->
 		apply_persistent_rule_to_level(RuleId, MaxLevel, Divisions, Actions)
 	;   apply_transient_rule_to_level(RuleId, MaxLevel, Divisions, Actions)
 	).
 
-apply_rule_impl(RuleId, minimize, _, _, Divisions, Actions) :-
+apply_rule_impl(RuleId, minimize, _, _, Actions) :-
 	rule(RuleId, Type),
+	rule_divisions(RuleId, Divisions),
 	(Type = persistent ->
 		apply_persistent_rule_to_level(RuleId, 1, Divisions, Actions)
 	;   apply_transient_rule_to_level(RuleId, 1, Divisions, Actions)
 	).
 
-apply_rule_impl(RuleId, solo, _, _, Divisions, Actions) :-
+apply_rule_impl(RuleId, solo, _, _, Actions) :-
 	get_rule_level(RuleId, CurrentLevel),
 	CurrentLevel > 0,
+	rule_divisions(RuleId, Divisions),
 	solo_rule_impl(RuleId, CurrentLevel, Divisions, Actions).
 
-apply_rule_impl(RuleId, reassert, _, _, Divisions, Actions) :-
+apply_rule_impl(RuleId, reassert, _, _, Actions) :-
 	get_rule_level(RuleId, CurrentLevel),
 	CurrentLevel > 0,
+	rule_divisions(RuleId, Divisions),
 	reassert_rule_impl(RuleId, CurrentLevel, Divisions, Actions).
 
-apply_rule_impl(RuleId, none, Delta, none, Divisions, Actions) :-
+apply_rule_impl(RuleId, none, Delta, none, Actions) :-
 	Delta \= none,
 	rule(RuleId, Type),
+	rule_divisions(RuleId, Divisions),
 	get_rule_level(RuleId, CurrentLevel),
 	max_level(RuleId, MaxLevel),
 	NewLevel is max(0, min(CurrentLevel + Delta, MaxLevel)),
@@ -126,9 +162,10 @@ apply_rule_impl(RuleId, none, Delta, none, Divisions, Actions) :-
 	;   apply_transient_rule_delta(RuleId, Delta, Divisions, Actions)
 	).
 
-apply_rule_impl(RuleId, none, none, Level, Divisions, Actions) :-
+apply_rule_impl(RuleId, none, none, Level, Actions) :-
 	Level \= none,
 	rule(RuleId, Type),
+	rule_divisions(RuleId, Divisions),
 	max_level(RuleId, MaxLevel),
 	ClampedLevel is max(0, min(Level, MaxLevel)),
 	(Type = persistent ->
@@ -136,8 +173,8 @@ apply_rule_impl(RuleId, none, none, Level, Divisions, Actions) :-
 	;   apply_transient_rule_to_level(RuleId, ClampedLevel, Divisions, Actions)
 	).
 
-apply_rule_impl(RuleId, none, none, none, Divisions, Actions) :-
-	apply_rule_impl(RuleId, none, 1, none, Divisions, Actions).
+apply_rule_impl(RuleId, none, none, none, Actions) :-
+	apply_rule_impl(RuleId, none, 1, none, Actions).
 
 % ============================================================================
 % Persistent rule application

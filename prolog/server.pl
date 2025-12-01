@@ -21,7 +21,7 @@
 	json_to_atom/2, get_dict/4
 ]).
 :- use_module(selectors, [resolve_selector/3, dict_to_selector/2]).
-:- use_module(rules, [apply_rule_impl/6, resolve_divisions/2]).
+:- use_module(rules, [apply_rule_impl/5, rule_divisions/2]).
 
 :- discontiguous execute_command/4.
 
@@ -129,9 +129,7 @@ execute_command(apply_rule, Args, Actions, State) :-
 	get_action_type(Args, ActionType),
 	get_dict(delta, Args, Delta, none),
 	get_dict(level, Args, Level, none),
-	get_dict(divisions, Args, DivisionsRaw, manuals),
-	resolve_divisions(DivisionsRaw, TargetDivisions),
-	apply_rule_impl(RuleId, ActionType, Delta, Level, TargetDivisions, Actions),
+	apply_rule_impl(RuleId, ActionType, Delta, Level, Actions),
 	save_snapshot(apply_rule(RuleId)),
 	get_current_state(State).
 
