@@ -25,23 +25,48 @@
 :- multifile state:antonym/2.
 :- multifile state:rule_selector/3.
 :- multifile state:rule_selector/4.
+:- multifile state:rule_selector/5.
 
 % ============================================================================
 % Transient rules
 % ============================================================================
 
+:- use_module(helpers).
+:- use_module(state, [manual/1]).
+
+:- multifile state:rule_predicate/1.
+:- multifile state:rule_action/2.
+
 state:rule(brighten, transient).
 state:rule(darken, transient).
 state:antonym(brighten, darken).
 state:antonym(darken, brighten).
-state:max_level(brighten, 3).
-state:max_level(darken, 3).
+state:rule_predicate(brighten).
+state:rule_predicate(darken).
 
-% brighten: add mixtures and mutations progressively (applies to all targeted divisions)
-state:rule_selector(brighten, 1, family(mixture, any, 1, first)).
-state:rule_selector(brighten, 2, family(mixture)).
-state:rule_selector(brighten, 3, family(mixture)).
-state:rule_selector(brighten, 3, family(mutation)).
+% brighten: engage one disengaged mixture per manual; if none, one mutation
+state:rule_action(brighten, Actions) :-
+	findall(Action, (
+		manual(Div),
+		brighten_one(Div, Action)
+	), Actions).
+
+brighten_one(Div, engage(Div, N)) :-
+	helpers:first_disengaged_in_family(Div, mixture, N), !.
+brighten_one(Div, engage(Div, N)) :-
+	helpers:first_disengaged_in_family(Div, mutation, N), !.
+
+% darken: disengage one engaged mutation per manual; if none, one mixture
+state:rule_action(darken, Actions) :-
+	findall(Action, (
+		manual(Div),
+		darken_one(Div, Action)
+	), Actions).
+
+darken_one(Div, disengage(Div, N)) :-
+	helpers:last_engaged_in_family(Div, mutation, N), !.
+darken_one(Div, disengage(Div, N)) :-
+	helpers:last_engaged_in_family(Div, mixture, N), !.
 
 state:rule(add_reeds, transient).
 state:max_level(add_reeds, 2).
@@ -53,25 +78,29 @@ state:rule_selector(add_reeds, 2, family(reed)).
 % Persistent rules (combinations)
 % ============================================================================
 
-% alpha - foundation combination building from soft to full
-state:rule(alpha, persistent).
-state:max_level(alpha, 3).
+% 'my persistent rule #1' - foundation combination building from soft to full
+% This demonstrates preset-specific selectors with universal fallback
+state:rule('my persistent rule #1', persistent).
+state:max_level('my persistent rule #1', 3).
 
-state:rule_selector(alpha, 1, great, numbers([1, 2, 3])).
-state:rule_selector(alpha, 1, swell, numbers([1, 2])).
+% Level 1: preset-specific numbers, with universal family-based fallback
+state:rule_selector('my persistent rule #1', 1, great, for_preset('Baroque*', numbers([1, 2, 3]))).
+state:rule_selector('my persistent rule #1', 1, great, for_preset('Romantic*', numbers([2, 4, 6]))).
+state:rule_selector('my persistent rule #1', 1, great, family(principal, 8)).  % universal fallback
+state:rule_selector('my persistent rule #1', 1, swell, numbers([1, 2])).
 
-state:rule_selector(alpha, 2, pedal, numbers([1, 2])).
-state:rule_selector(alpha, 2, great, numbers([4])).
+state:rule_selector('my persistent rule #1', 2, pedal, numbers([1, 2])).
+state:rule_selector('my persistent rule #1', 2, great, numbers([4])).
 
-state:rule_selector(alpha, 3, great, family(reed, any, 1, first)).
+state:rule_selector('my persistent rule #1', 3, great, family(reed, any, 1, first)).
 
-% bravo - reed-heavy combination
-state:rule(bravo, persistent).
-state:max_level(bravo, 2).
+% 'my persistent rule #2' - reed-heavy combination
+state:rule('my persistent rule #2', persistent).
+state:max_level('my persistent rule #2', 2).
 
-state:rule_selector(bravo, 1, great, numbers([1, 2])).
-state:rule_selector(bravo, 1, swell, family(reed, any, 1, first)).
-state:rule_selector(bravo, 2, great, family(reed)).
+state:rule_selector('my persistent rule #2', 1, great, numbers([1, 2])).
+state:rule_selector('my persistent rule #2', 1, swell, family(reed, any, 1, first)).
+state:rule_selector('my persistent rule #2', 2, great, family(reed)).
 
 % ============================================================================
 % Persistent rules with auxiliaries (couplers, tremulants)

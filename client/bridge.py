@@ -239,8 +239,7 @@ class Bridge:
 		rule_id: str,
 		action: str = None,
 		delta: int = None,
-		level: int = None,
-		divisions: list[str] = None
+		level: int = None
 	) -> dict:
 		args = {"rule": rule_id}
 		if action:
@@ -249,9 +248,17 @@ class Bridge:
 			args["delta"] = delta
 		if level is not None:
 			args["level"] = level
-		if divisions:
-			args["divisions"] = divisions
 		return self.execute("apply_rule", args)
+
+	def list_rules(self, preset: str = None) -> list[str]:
+		args = {}
+		if preset:
+			args["preset"] = preset
+		result = self.prolog.execute("list_rules", args)
+		if result.get("status") == "ok":
+			state = result.get("state", {})
+			return state.get("rules", [])
+		return []
 
 	def undo(self) -> dict:
 		return self.execute("undo", {})

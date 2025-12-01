@@ -2,24 +2,124 @@
 
 :- module(selectors, [
 	resolve_selector/3,
-	dict_to_selector/2
+	dict_to_selector/2,
+	preset_matches/2,
+	uses_for_preset/1,
+	selector_matches_preset/2,
+	rule_for_preset/2,
+	rules_for_preset/2
 ]).
 
 :- use_module(state, [
-	element/4, engaged/2, json_to_atom/2, get_dict/4
+	element/4, engaged/2, current_preset/1, json_to_atom/2, get_dict/4,
+	rule/2, rule_predicate/1, rule_selector/3, rule_selector/4, rule_selector/5
 ]).
 :- use_module(classification, [
 	element_family/3, element_footage/3,
 	coupler_source/2, coupler_destination/2, coupler_transposition/2
 ]).
+:- use_module(library(apply), [include/3]).
 
 :- discontiguous resolve_selector/3.
+
+% ============================================================================
+% Preset pattern matching
+% ============================================================================
+
+% Match preset against a pattern (supports * as glob wildcard)
+preset_matches(Preset, Pattern) :-
+	atom(Pattern),
+	atom_string(Pattern, PatternStr),
+	atom_string(Preset, PresetStr),
+	(   sub_string(PatternStr, _, _, _, "*")
+	->  glob_to_regex(PatternStr, Regex),
+	    re_match(Regex, PresetStr)
+	;   PresetStr = PatternStr
+	).
+
+glob_to_regex(Glob, Regex) :-
+	string_chars(Glob, Chars),
+	escape_and_convert(Chars, RegexChars),
+	append(['^'], RegexChars, WithStart),
+	append(WithStart, ['$'], Anchored),
+	string_chars(RegexStr, Anchored),
+	atom_string(Regex, RegexStr).
+
+escape_and_convert([], []).
+escape_and_convert(['*'|T], ['.'|['*'|T2]]) :- escape_and_convert(T, T2).
+escape_and_convert(['?'|T], ['.'|T2]) :- escape_and_convert(T, T2).
+escape_and_convert([H|T], ['\\'|[H|T2]]) :-
+	member(H, ['.', '^', '$', '+', '(', ')', '[', ']', '{', '}', '|', '\\']),
+	escape_and_convert(T, T2).
+escape_and_convert([H|T], [H|T2]) :-
+	H \= '*',
+	H \= '?',
+	\+ member(H, ['.', '^', '$', '+', '(', ')', '[', ']', '{', '}', '|', '\\']),
+	escape_and_convert(T, T2).
+
+% ============================================================================
+% Selector preset checking
+% ============================================================================
+
+% Check if a selector uses for_preset wrapper
+uses_for_preset(for_preset(_, _)).
+uses_for_preset(Sel) :-
+	compound(Sel),
+	Sel \= for_preset(_, _),
+	Sel =.. [_|Args],
+	member(Arg, Args),
+	uses_for_preset(Arg).
+
+% Check if selector matches a preset (either universal or matching for_preset)
+selector_matches_preset(for_preset(Pattern, _), Preset) :-
+	!, preset_matches(Preset, Pattern).
+selector_matches_preset(Sel, _) :-
+	\+ uses_for_preset(Sel).
+
+% ============================================================================
+% Rule filtering by preset
+% ============================================================================
+
+% Predicate-based rules are universal (available for all presets)
+rule_for_preset(RuleId, _) :-
+	rule(RuleId, _),
+	rule_predicate(RuleId).
+
+% Selector-based rules: check if any selector matches preset or is universal
+rule_for_preset(RuleId, Preset) :-
+	rule(RuleId, _),
+	\+ rule_predicate(RuleId),
+	once((
+		(rule_selector(RuleId, _, Sel), selector_matches_preset(Sel, Preset))
+	;   (rule_selector(RuleId, _, _, Sel), selector_matches_preset(Sel, Preset))
+	;   (rule_selector(RuleId, _, _, Sel, _), selector_matches_preset(Sel, Preset))
+	)).
+
+rules_for_preset(Preset, Rules) :-
+	findall(RuleId, rule_for_preset(RuleId, Preset), RulesUnsorted),
+	sort(RulesUnsorted, Rules).
 
 % ============================================================================
 % Selector resolution
 % ============================================================================
 
-resolve_selector(_, numbers(Numbers), Numbers) :- !.
+% for_preset wrapper - resolve inner selector only if preset matches
+resolve_selector(Division, for_preset(Pattern, InnerSelector), Elements) :-
+	current_preset(Preset),
+	(preset_matches(Preset, Pattern) ->
+		resolve_selector(Division, InnerSelector, Elements)
+	;   Elements = []
+	), !.
+
+resolve_selector(Division, numbers(Numbers), ValidElements) :-
+	include(valid_element(Division), Numbers, ValidElements),
+	findall(N, (member(N, Numbers), \+ element(Division, N, _, _)), Invalid),
+	(Invalid \= [] ->
+		format(user_error, "Warning: Invalid element numbers for ~w: ~w~n", [Division, Invalid])
+	;   true
+	), !.
+
+valid_element(Division, N) :- element(Division, N, _, _).
 
 resolve_selector(Division, all, Elements) :-
 	findall(N, element(Division, N, _, _), Elements), !.

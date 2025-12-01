@@ -94,7 +94,7 @@ family_of('Celinder Quinta', mutation).
 family_of('Clairon', reed).
 family_of('Clarinette', reed).
 family_of('Contre Bombarde', reed).
-family_of('Cornet V', mixture).
+family_of('Cornet', mixture).
 family_of('Doppel Flute', flute).
 family_of('Doublette', principal).
 family_of('Fagott', reed).
@@ -119,8 +119,7 @@ family_of('Nasard', flute).
 family_of('Nassad Quinta', flute).
 family_of('Octav', principal).
 family_of('Piccolo', flute).
-family_of('Plein Jeu III', mixture).
-family_of('Plein Jeu V', mixture).
+family_of('Plein Jeu', mixture).
 family_of('Posaunen Bass', reed).
 family_of('Prestant', principal).
 family_of('Principal', principal).

@@ -18,10 +18,12 @@
 	rule_level/2, owns/3, division/1,
 	do_engage/2, do_disengage/2,
 	reset_history/0, save_snapshot/1, restore_snapshot/2, get_current_state/1,
+	rpc_action/4,
 	json_to_atom/2, get_dict/4
 ]).
-:- use_module(selectors, [resolve_selector/3, dict_to_selector/2]).
-:- use_module(rules, [apply_rule_impl/6, resolve_divisions/2]).
+:- use_module(selectors, [resolve_selector/3, dict_to_selector/2, rules_for_preset/2]).
+:- use_module(rules, [apply_rule_impl/5, rule_divisions/2]).
+:- use_module(classification, [element_family/3]).
 
 :- discontiguous execute_command/4.
 
@@ -129,9 +131,7 @@ execute_command(apply_rule, Args, Actions, State) :-
 	get_action_type(Args, ActionType),
 	get_dict(delta, Args, Delta, none),
 	get_dict(level, Args, Level, none),
-	get_dict(divisions, Args, DivisionsRaw, manuals),
-	resolve_divisions(DivisionsRaw, TargetDivisions),
-	apply_rule_impl(RuleId, ActionType, Delta, Level, TargetDivisions, Actions),
+	apply_rule_impl(RuleId, ActionType, Delta, Level, Actions),
 	save_snapshot(apply_rule(RuleId)),
 	get_current_state(State).
 
@@ -173,6 +173,7 @@ execute_command(sync, Args, [], State) :-
 		json_to_atom(E.type, Type),
 		assertz(element(Division, Number, Name, Type))
 	)),
+	log_unclassified_elements,
 	retractall(engaged(_, _)),
 	forall(member(Eng, EngagedList), (
 		json_to_atom(Eng.division, D),
@@ -184,6 +185,17 @@ execute_command(sync, Args, [], State) :-
 	reset_history,
 	save_snapshot(sync),
 	get_current_state(State).
+
+log_unclassified_elements :-
+	findall(Division-Number-Name, (
+		element(Division, Number, Name, stop),
+		Name \= '',
+		\+ element_family(Division, Number, _)
+	), Unclassified),
+	(Unclassified \= [] ->
+		format(user_error, "Warning: Unclassified stops: ~w~n", [Unclassified])
+	;   true
+	).
 
 % --- get_state ---
 execute_command(get_state, _, [], State) :-
@@ -209,6 +221,15 @@ execute_command(retract_facts, Args, [], State) :-
 	)),
 	get_current_state(State).
 
+% --- list_rules (for preset or current) ---
+execute_command(list_rules, Args, [], State) :-
+	(get_dict(preset, Args, PresetRaw) ->
+		json_to_atom(PresetRaw, Preset)
+	;   current_preset(Preset)
+	),
+	rules_for_preset(Preset, Rules),
+	State = _{rules: Rules, preset: Preset}.
+
 % ============================================================================
 % Helper predicates
 % ============================================================================
@@ -224,16 +245,6 @@ get_rule_id(Args, RuleId) :-
 get_action_type(Args, ActionType) :-
 	get_dict(action, Args, ActionValue, none),
 	(ActionValue = none -> ActionType = none ; json_to_atom(ActionValue, ActionType)).
-
-% RPC action generation
-rpc_action(Division, Number, Value, Action) :-
-	element(Division, Number, _, Type),
-	rpc_action_for_type(Type, Division, Number, Value, Action).
-
-rpc_action_for_type(stop, Division, Number, Value, set_stop(Division, Number, Value)).
-rpc_action_for_type(coupler, _, Number, Value, set_coupler(Number, Value)).
-rpc_action_for_type(mono_coupler, _, Number, Value, set_mono_coupler(Number, Value)).
-rpc_action_for_type(tremulant, _, Number, Value, set_tremulant(Number, Value)).
 
 % ============================================================================
 % State loading/saving (for Python bridge)
@@ -332,3 +343,6 @@ state_to_json(state(Engaged, RuleLevels, _), Json) :-
 	findall(_{division: D, number: N}, member(engaged(D, N), Engaged), EngagedJson),
 	findall(_{rule: R, level: L}, member(rule_level(R, L), RuleLevels), RulesJson),
 	Json = _{engaged: EngagedJson, rule_levels: RulesJson}.
+
+state_to_json(Dict, Dict) :-
+	is_dict(Dict).
