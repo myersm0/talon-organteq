@@ -4,6 +4,7 @@
 	resolve_selector/3,
 	dict_to_selector/2,
 	preset_matches/2,
+	uses_for_preset/1,
 	selector_matches_preset/2,
 	rule_for_preset/2,
 	rules_for_preset/2

@@ -343,3 +343,6 @@ state_to_json(state(Engaged, RuleLevels, _), Json) :-
 	findall(_{division: D, number: N}, member(engaged(D, N), Engaged), EngagedJson),
 	findall(_{rule: R, level: L}, member(rule_level(R, L), RuleLevels), RulesJson),
 	Json = _{engaged: EngagedJson, rule_levels: RulesJson}.
+
+state_to_json(Dict, Dict) :-
+	is_dict(Dict).

@@ -22,7 +22,7 @@
 	rpc_action/4,
 	json_to_atom/2
 ]).
-:- use_module(selectors, [resolve_selector/3, preset_matches/2]).
+:- use_module(selectors, [resolve_selector/3, preset_matches/2, uses_for_preset/1, selector_matches_preset/2]).
 
 % ============================================================================
 % Rule divisions inference
@@ -105,11 +105,6 @@ is_matching_preset_selector(Preset, Selector-_) :-
 	uses_for_preset(Selector),
 	selector_matches_preset(Selector, Preset).
 
-uses_for_preset(for_preset(_, _)) :- !.
-
-selector_matches_preset(for_preset(Pattern, _), Preset) :-
-	preset_matches(Preset, Pattern).
-
 % Unified selector lookup - returns Selector and Action for a given rule/level/division
 get_selector_for_level(RuleId, Level, Division, Selector, Action) :-
 	rule_selector(RuleId, Level, Div, Selector, Action),
@@ -147,12 +142,6 @@ resolve_divisions(Single, [Div]) :-
 % ============================================================================
 
 % Error for unknown rules - must be first clause
-apply_rule_impl(RuleId, _, _, _, _) :-
-	\+ rule(RuleId, _),
-	\+ rule_predicate(RuleId),
-	!,
-	throw(error(unknown_rule(RuleId), context(apply_rule_impl/5, 'Rule does not exist'))).
-
 % Predicate-based rules bypass level/delta logic entirely
 apply_rule_impl(RuleId, _, _, _, Actions) :-
 	rule_predicate(RuleId),
@@ -222,6 +211,10 @@ apply_rule_impl(RuleId, none, none, Level, Actions) :-
 
 apply_rule_impl(RuleId, none, none, none, Actions) :-
 	apply_rule_impl(RuleId, none, 1, none, Actions).
+
+% Catch-all: unknown rule
+apply_rule_impl(RuleId, _, _, _, _) :-
+	throw(error(unknown_rule(RuleId), context(apply_rule_impl/5, 'Rule does not exist or no matching clause'))).
 
 % ============================================================================
 % Persistent rule application
