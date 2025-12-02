@@ -1,6 +1,6 @@
 """
 Start server from the prolog directory:
-    cd prolog && swipl -g "consult('main.pl'), load_rules_from_dir('../examples', 'rules.pl'), server(5000)."
+    cd prolog && swipl -g "consult('main.pl'), load_rules_from_dir('../examples', 'custom_rules.pl'), server(5000)."
 
 Run tests:
     python -m unittest tests.test_prolog -v
