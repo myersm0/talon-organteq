@@ -14,7 +14,7 @@ term_expansion(
 ) :-
     current_file_preset(Preset).
 
-% Baroque Cathedral (Freiberg - 1710-1714)
+% for preset: Baroque Cathedral (Freiberg - 1710-1714)
 :- retractall(current_file_preset(_)), assertz(current_file_preset('Baroque Cathedral (Freiberg - 1710-1714)')).
 
 state:rule('crescendo swell', persistent).
@@ -64,6 +64,33 @@ local_selector('crescendo pedal', 7, pedal, numbers([9])).
 local_selector('crescendo pedal', 8, pedal, numbers([10])).
 
 
+% for preset: Neo-Classical Church (L'Alpe d'Huez - 1978)
+:- retractall(current_file_preset(_)), assertz(current_file_preset('Neo-Classical Church (L\'Alpe d\'Huez - 1978)')).
 
+state:rule('crescendo swell', persistent).
+state:max_level('crescendo swell', 4).
+local_selector('crescendo swell', 1, swell, names(['Flute Harmonique 8\''])).
+local_selector('crescendo swell', 2, swell, names(['Flöte 4\''])).
+local_selector('crescendo swell', 3, swell, names(['Larigot 1\'1/3'])).
+local_selector('crescendo swell', 4, swell, names(['Hautbois 8\''])).
+
+state:rule('crescendo great', persistent).
+state:max_level('crescendo great', 7).
+local_selector('crescendo great', 1, great, names(['Gedact 8\''])).
+local_selector('crescendo great', 2, great, names(['Prinzipal 8\''])).
+local_selector('crescendo great', 3, great, names(['Flute Harmonique 8\''])).
+local_selector('crescendo great', 4, great, names(['Prestant 4\''])).
+local_selector('crescendo great', 5, great, names(['Doublette 2\''])).
+local_selector('crescendo great', 6, great, names(['Cornet V'])).
+local_selector('crescendo great', 7, great, names(['Krumhorn 8\''])).
+
+state:rule('crescendo pedal', persistent).
+state:max_level('crescendo pedal', 5).
+local_selector('crescendo pedal', 1, pedal, names(['Bourdon 16\''])).
+local_selector('crescendo pedal', 2, pedal, names(['Doppel Flute 8\''])).
+local_selector('crescendo pedal', 3, pedal, names(['Bourdon 8\''])).
+local_selector('crescendo pedal', 4, pedal, names(['Gross Quintaden 16\''])).
+local_selector('crescendo pedal', 5, pedal, names(['Bombarde 16\''])).
+local_selector('crescendo pedal', 5, pedal, names(['Bombardeir 16\''])).
 
 
