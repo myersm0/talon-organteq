@@ -33,20 +33,11 @@ if __name__ == "__main__":
 		zone_size = 128 / (max_level + 1)
 		return min(int(cc_value / zone_size), max_level)
 
-	def get_max_level(rule_id: str) -> int:
-		levels = {
-            "crescendo pedal": 8,
-            "crescendo choir": 5,
-            "crescendo great": 13,
-            "crescendo swell": 7,
-		}
-		return levels.get(rule_id, 3)
-
 	def handle_cc(cc_number: int, value: int):
 		rule_id = fader_rules.get(cc_number)
 		if not rule_id:
 			return
-		max_level = get_max_level(rule_id)
+		max_level = bridge.get_max_level(rule_id)
 		level = cc_to_level(value, max_level)
 		print(f"Fader CC{cc_number} = {value} → {rule_id} level {level}")
 		bridge.apply_rule(rule_id, level=level)

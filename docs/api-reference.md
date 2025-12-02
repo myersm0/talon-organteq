@@ -199,6 +199,25 @@ rules = bridge.list_rules()
 baroque_rules = bridge.list_rules(preset="Baroque Cathedral")
 ```
 
+### get_rule_info(rule_id) -> dict | None
+Get metadata for a rule. Returns None if the rule doesn't exist.
+```python
+info = bridge.get_rule_info("crescendo great")
+# {
+#     "rule": "crescendo great",
+#     "type": "persistent",
+#     "max_level": 13,
+#     "antonym": null,
+#     "current_level": 0
+# }
+```
+
+### get_max_level(rule_id) -> int
+Convenience method to get a rule's max level. Returns 1 if rule not found.
+```python
+max_level = bridge.get_max_level("full_organ")  # 4
+```
+
 ---
 
 ## History

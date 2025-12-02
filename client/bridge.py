@@ -260,6 +260,18 @@ class Bridge:
 			return state.get("rules", [])
 		return []
 
+	def get_rule_info(self, rule_id: str) -> dict | None:
+		result = self.execute("get_rule_info", {"rule": rule_id})
+		if result.get("status") == "ok":
+			return result.get("state", {})
+		return None
+
+	def get_max_level(self, rule_id: str) -> int:
+		info = self.get_rule_info(rule_id)
+		if info:
+			return info.get("max_level", 1)
+		return 1
+
 	def undo(self) -> dict:
 		return self.execute("undo", {})
 

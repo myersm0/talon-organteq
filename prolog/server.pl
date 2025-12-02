@@ -230,6 +230,26 @@ execute_command(list_rules, Args, [], State) :-
 	rules_for_preset(Preset, Rules),
 	State = _{rules: Rules, preset: Preset}.
 
+% --- get_rule_info ---
+execute_command(get_rule_info, Args, [], State) :-
+	get_rule_id(Args, RuleId),
+	rule(RuleId, Type),
+	(max_level(RuleId, MaxLevel) -> true ; MaxLevel = 1),
+	(antonym(RuleId, Antonym) -> true ; Antonym = null),
+	get_rule_level(RuleId, CurrentLevel),
+	State = _{
+		rule: RuleId,
+		type: Type,
+		max_level: MaxLevel,
+		antonym: Antonym,
+		current_level: CurrentLevel
+	}.
+
+execute_command(get_rule_info, Args, [], _) :-
+	get_rule_id(Args, RuleId),
+	\+ rule(RuleId, _),
+	throw(unknown_rule(RuleId)).
+
 % ============================================================================
 % Helper predicates
 % ============================================================================
