@@ -21,7 +21,7 @@
 	rpc_action/4,
 	json_to_atom/2, get_dict/4
 ]).
-:- use_module(selectors, [resolve_selector/3, dict_to_selector/2, rules_for_preset/2]).
+:- use_module(selectors, [resolve_selector/3, dict_to_selector/2, rules_for_preset/2, computed_max_level/3]).
 :- use_module(rules, [apply_rule_impl/5, rule_divisions/2]).
 :- use_module(classification, [element_family/3]).
 
@@ -234,7 +234,8 @@ execute_command(list_rules, Args, [], State) :-
 execute_command(get_rule_info, Args, [], State) :-
 	get_rule_id(Args, RuleId),
 	rule(RuleId, Type),
-	(max_level(RuleId, MaxLevel) -> true ; MaxLevel = 1),
+	current_preset(Preset),
+	(computed_max_level(RuleId, Preset, MaxLevel) -> true ; MaxLevel = 1),
 	(antonym(RuleId, Antonym) -> true ; Antonym = null),
 	get_rule_level(RuleId, CurrentLevel),
 	State = _{

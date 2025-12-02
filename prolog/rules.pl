@@ -22,7 +22,7 @@
 	rpc_action/4,
 	json_to_atom/2
 ]).
-:- use_module(selectors, [resolve_selector/3, preset_matches/2, uses_for_preset/1, selector_matches_preset/2]).
+:- use_module(selectors, [resolve_selector/3, preset_matches/2, uses_for_preset/1, selector_matches_preset/2, computed_max_level/3]).
 
 % ============================================================================
 % Rule divisions inference
@@ -158,7 +158,8 @@ apply_rule_impl(RuleId, mute, _, _, Actions) :-
 	).
 
 apply_rule_impl(RuleId, maximize, _, _, Actions) :-
-	max_level(RuleId, MaxLevel),
+	current_preset(Preset),
+	computed_max_level(RuleId, Preset, MaxLevel),
 	rule(RuleId, Type),
 	rule_divisions(RuleId, Divisions),
 	(Type = persistent ->
@@ -191,7 +192,8 @@ apply_rule_impl(RuleId, none, Delta, none, Actions) :-
 	rule(RuleId, Type),
 	rule_divisions(RuleId, Divisions),
 	get_rule_level(RuleId, CurrentLevel),
-	max_level(RuleId, MaxLevel),
+	current_preset(Preset),
+	computed_max_level(RuleId, Preset, MaxLevel),
 	NewLevel is max(0, min(CurrentLevel + Delta, MaxLevel)),
 	(Type = persistent ->
 		apply_persistent_rule_to_level(RuleId, NewLevel, Divisions, Actions)
@@ -202,7 +204,8 @@ apply_rule_impl(RuleId, none, none, Level, Actions) :-
 	Level \= none,
 	rule(RuleId, Type),
 	rule_divisions(RuleId, Divisions),
-	max_level(RuleId, MaxLevel),
+	current_preset(Preset),
+	computed_max_level(RuleId, Preset, MaxLevel),
 	ClampedLevel is max(0, min(Level, MaxLevel)),
 	(Type = persistent ->
 		apply_persistent_rule_to_level(RuleId, ClampedLevel, Divisions, Actions)
@@ -304,7 +307,8 @@ execute_rule_action(toggle(Div, N), RPCAction) :-
 
 % Selector-based transient rules: apply all selectors once
 apply_selector_based_transient(RuleId, Divisions, Actions) :-
-	max_level(RuleId, MaxLevel),
+	current_preset(Preset),
+	computed_max_level(RuleId, Preset, MaxLevel),
 	findall(Action, (
 		between(1, MaxLevel, L),
 		member(Div, Divisions),

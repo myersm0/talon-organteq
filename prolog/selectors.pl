@@ -7,7 +7,8 @@
 	uses_for_preset/1,
 	selector_matches_preset/2,
 	rule_for_preset/2,
-	rules_for_preset/2
+	rules_for_preset/2,
+	computed_max_level/3
 ]).
 
 :- use_module(state, [
@@ -98,6 +99,39 @@ rule_for_preset(RuleId, Preset) :-
 rules_for_preset(Preset, Rules) :-
 	findall(RuleId, rule_for_preset(RuleId, Preset), RulesUnsorted),
 	sort(RulesUnsorted, Rules).
+
+% Compute max_level from selectors that match the current preset.
+% If preset-specific selectors exist, use only those (they take priority).
+% Otherwise fall back to universal selectors.
+
+computed_max_level(RuleId, Preset, MaxLevel) :-
+	findall(Level, (
+		(   rule_selector(RuleId, Level, Sel)
+		;   rule_selector(RuleId, Level, _, Sel)
+		;   rule_selector(RuleId, Level, _, Sel, _)
+		),
+		uses_for_preset(Sel),
+		selector_matches_preset(Sel, Preset)
+	), PresetLevels),
+	PresetLevels \= [],
+	!,
+	max_list(PresetLevels, MaxLevel).
+
+computed_max_level(RuleId, _, MaxLevel) :-
+	findall(Level, (
+		(   rule_selector(RuleId, Level, Sel)
+		;   rule_selector(RuleId, Level, _, Sel)
+		;   rule_selector(RuleId, Level, _, Sel, _)
+		),
+		\+ uses_for_preset(Sel)
+	), UniversalLevels),
+	UniversalLevels \= [],
+	!,
+	max_list(UniversalLevels, MaxLevel).
+
+% Fallback to explicit max_level/2 (for predicate-based rules)
+computed_max_level(RuleId, _, MaxLevel) :-
+	max_level(RuleId, MaxLevel).
 
 % ============================================================================
 % Selector resolution
