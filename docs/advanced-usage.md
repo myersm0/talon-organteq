@@ -272,7 +272,7 @@ By default, `apply_rule` only affects manuals. To include auxiliaries:
 
 ```python
 # The rule itself must define auxiliary selectors
-# (see full_organ example in rules_example.pl)
+# (see full_organ example in examples/custom_rules.pl)
 ```
 
 In the rule definition:
@@ -337,7 +337,7 @@ family_of('Custom Stop Name', reed).
 Use the Prolog server interactively:
 
 ```bash
-swipl -g "consult('main.pl'), load_rules_from_dir('.', 'rules_example.pl')."
+swipl -g "consult('main.pl'), load_rules_from_dir('../examples', 'custom_rules.pl')."
 ```
 
 Then query:
