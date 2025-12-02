@@ -8,7 +8,11 @@
 	selector_matches_preset/2,
 	rule_for_preset/2,
 	rules_for_preset/2,
-	computed_max_level/3
+	computed_max_level/3,
+	has_preset_specific_selectors/2,
+	effective_rule_selector/3,
+	effective_rule_selector/4,
+	effective_rule_selector/5
 ]).
 
 :- use_module(state, [
@@ -132,6 +136,59 @@ computed_max_level(RuleId, _, MaxLevel) :-
 % Fallback to explicit max_level/2 (for predicate-based rules)
 computed_max_level(RuleId, _, MaxLevel) :-
 	max_level(RuleId, MaxLevel).
+
+% Check if a rule has any preset-specific selectors matching the current preset
+has_preset_specific_selectors(RuleId, Preset) :-
+	once((
+		(   rule_selector(RuleId, _, Sel)
+		;   rule_selector(RuleId, _, _, Sel)
+		;   rule_selector(RuleId, _, _, Sel, _)
+		),
+		uses_for_preset(Sel),
+		selector_matches_preset(Sel, Preset)
+	)).
+
+% Effective rule selectors: if preset-specific exist, use only those.
+% Otherwise fall back to universal selectors.
+
+% Arity 3: rule_selector(RuleId, Level, Selector)
+effective_rule_selector(RuleId, Level, Sel) :-
+	current_preset(Preset),
+	has_preset_specific_selectors(RuleId, Preset),
+	!,
+	rule_selector(RuleId, Level, Sel),
+	uses_for_preset(Sel),
+	selector_matches_preset(Sel, Preset).
+
+effective_rule_selector(RuleId, Level, Sel) :-
+	rule_selector(RuleId, Level, Sel),
+	\+ uses_for_preset(Sel).
+
+% Arity 4: rule_selector(RuleId, Level, Division, Selector)
+effective_rule_selector(RuleId, Level, Div, Sel) :-
+	current_preset(Preset),
+	has_preset_specific_selectors(RuleId, Preset),
+	!,
+	rule_selector(RuleId, Level, Div, Sel),
+	uses_for_preset(Sel),
+	selector_matches_preset(Sel, Preset).
+
+effective_rule_selector(RuleId, Level, Div, Sel) :-
+	rule_selector(RuleId, Level, Div, Sel),
+	\+ uses_for_preset(Sel).
+
+% Arity 5: rule_selector(RuleId, Level, Division, Selector, Action)
+effective_rule_selector(RuleId, Level, Div, Sel, Action) :-
+	current_preset(Preset),
+	has_preset_specific_selectors(RuleId, Preset),
+	!,
+	rule_selector(RuleId, Level, Div, Sel, Action),
+	uses_for_preset(Sel),
+	selector_matches_preset(Sel, Preset).
+
+effective_rule_selector(RuleId, Level, Div, Sel, Action) :-
+	rule_selector(RuleId, Level, Div, Sel, Action),
+	\+ uses_for_preset(Sel).
 
 % ============================================================================
 % Selector resolution

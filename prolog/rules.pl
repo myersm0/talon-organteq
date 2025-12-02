@@ -22,7 +22,10 @@
 	rpc_action/4,
 	json_to_atom/2
 ]).
-:- use_module(selectors, [resolve_selector/3, preset_matches/2, uses_for_preset/1, selector_matches_preset/2, computed_max_level/3]).
+:- use_module(selectors, [
+	resolve_selector/3, preset_matches/2, uses_for_preset/1, selector_matches_preset/2, computed_max_level/3,
+	effective_rule_selector/3, effective_rule_selector/4, effective_rule_selector/5
+]).
 
 % ============================================================================
 % Rule divisions inference
@@ -40,16 +43,16 @@ rule_divisions(RuleId, Divisions) :-
 	sort(AllDivs, Divisions).
 
 rule_selector_division(RuleId, Div) :-
-	rule_selector(RuleId, _, _),
+	effective_rule_selector(RuleId, _, _),
 	manuals(Manuals),
 	member(Div, Manuals).
 
 rule_selector_division(RuleId, Div) :-
-	rule_selector(RuleId, _, DivSpec, _),
+	effective_rule_selector(RuleId, _, DivSpec, _),
 	expand_division(DivSpec, Div).
 
 rule_selector_division(RuleId, Div) :-
-	rule_selector(RuleId, _, DivSpec, _, _),
+	effective_rule_selector(RuleId, _, DivSpec, _, _),
 	expand_division(DivSpec, Div).
 
 expand_division(all, Div) :-
@@ -107,14 +110,14 @@ is_matching_preset_selector(Preset, Selector-_) :-
 
 % Unified selector lookup - returns Selector and Action for a given rule/level/division
 get_selector_for_level(RuleId, Level, Division, Selector, Action) :-
-	rule_selector(RuleId, Level, Div, Selector, Action),
+	effective_rule_selector(RuleId, Level, Div, Selector, Action),
 	(Div = Division ; Div = all).
 get_selector_for_level(RuleId, Level, Division, Selector, Action) :-
-	rule_selector(RuleId, Level, Div, Selector),
+	effective_rule_selector(RuleId, Level, Div, Selector),
 	(Div = Division ; Div = all),
 	Action = engage.
 get_selector_for_level(RuleId, Level, _, Selector, engage) :-
-	rule_selector(RuleId, Level, Selector).
+	effective_rule_selector(RuleId, Level, Selector).
 
 rule_elements_cumulative(RuleId, MaxLevel, Division, Elements) :-
 	findall(E, (
