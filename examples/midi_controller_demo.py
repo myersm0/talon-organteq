@@ -1,12 +1,12 @@
 """
-midi_faders.py - Map MIDI faders to rule levels
+midi_controller_demo.py - Map MIDI faders to rule levels
 
 Requires: pip install mido python-rtmidi
 
 Usage:
     python midi_faders.py
 
-Listens for MIDI messages from an Arturia KeyLab mk3 keyboard. 
+Listens for MIDI CC messages from an Arturia KeyLab mk3 keyboard. 
 You would need to adapt this for your specific MIDI device.
 """
 
@@ -20,59 +20,29 @@ if __name__ == "__main__":
 
 	fader_channel = 2
 
+    # numbers 73, 75, 79, 72 are the MIDI CC message codes that correspond to 
+    # the messages transmitted by the first four faders on my KeyLab, in order
 	fader_rules = {
-		73: "my persistent rule #1",
-		75: "my persistent rule #2",
-		79: "full_organ"
+		73: "crescendo pedal",
+		75: "crescendo choir",
+		79: "crescendo great",
+		72: "crescendo swell",
 	}
 
-	brightness_fader = 72
-	brightness_max_level = 5
-
 	bridge = None
-	current_brightness = 0
 
 	def cc_to_level(cc_value: int, max_level: int) -> int:
 		zone_size = 128 / (max_level + 1)
 		return min(int(cc_value / zone_size), max_level)
 
-	def get_max_level(rule_id: str) -> int:
-		levels = {
-			"my persistent rule #1": 3,
-			"my persistent rule #2": 2,
-			"full_organ": 4,
-		}
-		return levels.get(rule_id, 3)
-
 	def handle_cc(cc_number: int, value: int):
-		if cc_number == brightness_fader:
-			handle_brightness_fader(value)
-			return
 		rule_id = fader_rules.get(cc_number)
 		if not rule_id:
 			return
-		max_level = get_max_level(rule_id)
+		max_level = bridge.get_max_level(rule_id)
 		level = cc_to_level(value, max_level)
 		print(f"Fader CC{cc_number} = {value} → {rule_id} level {level}")
 		bridge.apply_rule(rule_id, level=level)
-
-	def handle_brightness_fader(value: int):
-		global current_brightness
-		target = cc_to_level(value, brightness_max_level)
-		if target == current_brightness:
-			return
-		if target > current_brightness:
-			steps = target - current_brightness
-			for _ in range(steps):
-				print(f"Brightness fader {value} → brighten (level {current_brightness} → {current_brightness + 1})")
-				bridge.apply_rule("brighten")
-				current_brightness += 1
-		else:
-			steps = current_brightness - target
-			for _ in range(steps):
-				print(f"Brightness fader {value} → darken (level {current_brightness} → {current_brightness - 1})")
-				bridge.apply_rule("darken")
-				current_brightness -= 1
 
 	def list_midi_inputs():
 		print("Available MIDI inputs:")
@@ -80,7 +50,7 @@ if __name__ == "__main__":
 			print(f"  {name}")
 
 	def main():
-		global bridge, current_brightness
+		global bridge
 
 		list_midi_inputs()
 		print()
@@ -89,8 +59,6 @@ if __name__ == "__main__":
 		bridge.sync()
 		print("Bridge connected and synced")
 
-		current_brightness = 0
-
 		input_name = None
 		for name in mido.get_input_names():
 			if "KeyLab" in name or "MIDIIN" in name:
@@ -98,12 +66,11 @@ if __name__ == "__main__":
 				break
 
 		if not input_name:
-			print("Could not find Keylab MIDI input. Available inputs listed above.")
+			print("Could not find KeyLab MIDI input. Available inputs listed above.")
 			return
 
 		print(f"Opening MIDI input: {input_name}")
 		print(f"Fader mappings: {fader_rules}")
-		print(f"Brightness fader: CC{brightness_fader} (0-5 levels)")
 		print("Listening for MIDI messages... (Ctrl+C to quit)")
 
 		with mido.open_input(input_name) as port:
