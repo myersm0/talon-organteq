@@ -350,12 +350,3 @@ state:coupler_mapping('Is That A Synth ?!', 4, swell, great, unison, forward).
 state:coupler_mapping('Is That A Synth ?!', 5, swell, choir, unison, forward).
 state:coupler_mapping('Is That A Synth ?!', 6, choir, choir, sub, forward).
 
-% Default fallback (common configuration)
-state:coupler_mapping(_, 1, choir, pedal, unison, normal).
-state:coupler_mapping(_, 2, great, pedal, unison, normal).
-state:coupler_mapping(_, 3, swell, pedal, unison, normal).
-state:coupler_mapping(_, 4, choir, great, unison, normal).
-state:coupler_mapping(_, 5, swell, great, unison, normal).
-state:coupler_mapping(_, 6, swell, choir, unison, normal).
-
-
