@@ -20,7 +20,7 @@
 	rule/2, rule_predicate/1, rule_selector/3, rule_selector/4, rule_selector/5
 ]).
 :- use_module(classification, [
-	element_family/3, element_footage/3,
+	element_family/3, element_footage/3, base_name/2, alias_of/2, name_footage/2,
 	coupler_source/2, coupler_destination/2, coupler_transposition/2
 ]).
 :- use_module(library(apply), [include/3]).
@@ -240,7 +240,20 @@ resolve_selector(Division, names(Names), Elements) :-
 	findall(N, (
 		member(Name, Names),
 		element(Division, N, Name, _)
-	), Elements), !.
+	), ExactMatches),
+	(ExactMatches \= [] ->
+		Elements = ExactMatches
+	;
+		findall(N, (
+			member(Name, Names),
+			base_name(Name, ReqBase),
+			name_footage(Name, ReqFootage),
+			element(Division, N, ElemName, _),
+			base_name(ElemName, ElemBase),
+			alias_of(ReqBase, ElemBase),
+			name_footage(ElemName, ReqFootage)
+		), Elements)
+	), !.
 
 resolve_selector(Division, engaged, Elements) :-
 	findall(N, engaged(Division, N), Elements), !.

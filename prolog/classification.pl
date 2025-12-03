@@ -2,6 +2,8 @@
 
 :- module(classification, [
 	family_of/2,
+	aliases/1,
+	alias_of/2,
 	mono_coupler_name/2,
 	element_type/3,
 	is_stop/2,
@@ -9,6 +11,7 @@
 	is_mono_coupler/2,
 	element_family/3,
 	element_footage/3,
+	name_footage/2,
 	base_name/2,
 	coupler_source/2,
 	coupler_destination/2,
@@ -56,6 +59,9 @@ element_family(Division, Number, Family) :-
 
 element_footage(Division, Number, Footage) :-
 	element(Division, Number, Name, stop),
+	name_footage(Name, Footage).
+
+name_footage(Name, Footage) :-
 	atom_string(Name, NameStr),
 	(   sub_string(NameStr, _, _, _, "32'") -> Footage = 32
 	;   sub_string(NameStr, _, _, _, "16'") -> Footage = 16
@@ -110,12 +116,12 @@ family_of('Gross Untersatz', principal).
 family_of('Hautbois', reed).
 family_of('Kontra Bass', principal).
 family_of('Krumhorn', reed).
-family_of('Larigot', flute).
+family_of('Larigot', mutation).
 family_of('Mixtura', mixture).
 family_of('Montre', principal).
 family_of('Musette', reed).
 family_of('Nachthorn', flute).
-family_of('Nasard', flute).
+family_of('Nasard', mutation).
 family_of('Nassad Quinta', flute).
 family_of('Octav', principal).
 family_of('Piccolo', flute).
@@ -154,3 +160,35 @@ mono_coupler_name('bass 1', 1).
 mono_coupler_name('bass 2', 2).
 mono_coupler_name('melody 1', 3).
 mono_coupler_name('melody 2', 4).
+
+% ============================================================================
+% Stop name aliases
+% ============================================================================
+% Equivalent stop names across different languages/traditions.
+% Used by the names() selector to find substitutes when exact match fails.
+
+aliases(['Cromorne', 'Krummhorn', 'Cremona']).
+aliases(['Trompette', 'Trumpet', 'Trommet']).
+aliases(['Hautbois', 'Oboe', 'Hoboe']).
+aliases(['Voix Humaine', 'Vox Humana']).
+aliases(['Bourdon', 'Bordun']).
+aliases(['Montre', 'Prinzipal', 'Principal', 'Prestant', 'Diapason']).
+aliases(['Gambe', 'Gamba', 'Viol Gamba', 'Viola da Gamba']).
+aliases(['Flöte', 'Flute', 'Flauto']).
+aliases(['Gedact', 'Gedackt', 'Gedeckt']).
+aliases(['Sesquialtera', 'Sesquialter']).
+aliases(['Nazard', 'Nasard', 'Nasat']).
+aliases(['Cornet', 'Kornett']).
+aliases(['Zimbel', 'Cymbale', 'Cymbal']).
+aliases(['Mixtur', 'Mixtura', 'Mixture', 'Fourniture']).
+aliases(['Fagott', 'Basson', 'Bassoon']).
+aliases(['Posaunen', 'Posaune', 'Trombone']).
+aliases(['Clairon', 'Clarion']).
+aliases(['Octav', 'Octave', 'Oktave']).
+aliases(['Quinte', 'Quint', 'Quinta']).
+
+alias_of(Name, Alias) :-
+	aliases(Group),
+	member(Name, Group),
+	member(Alias, Group).
+
