@@ -1,10 +1,10 @@
 """
-midi_controller_demo.py - Map MIDI faders to rule levels
+Demo for how to map MIDI faders to rule levels
 
 Requires: pip install mido python-rtmidi
 
 Usage:
-    python midi_faders.py
+    python midi_controller_demo.py
 
 Listens for MIDI CC messages from an Arturia KeyLab mk3 keyboard. 
 You would need to adapt this for your specific MIDI device.
@@ -12,6 +12,8 @@ You would need to adapt this for your specific MIDI device.
 
 if __name__ == "__main__":
 	import sys
+	import time
+	import threading
 	from pathlib import Path
 	sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -19,9 +21,10 @@ if __name__ == "__main__":
 	from client.bridge import Bridge
 
 	fader_channel = 2
+	preset_check_interval = 2.0
 
-    # numbers 73, 75, 79, 72 are the MIDI CC message codes that correspond to 
-    # the messages transmitted by the first four faders on my KeyLab, in order
+	# numbers 73, 75, 79, 72 are the MIDI CC message codes that correspond to 
+	# the messages transmitted by the first four faders on my KeyLab, in order
 	fader_rules = {
 		73: "crescendo pedal",
 		75: "crescendo choir",
@@ -44,6 +47,15 @@ if __name__ == "__main__":
 		print(f"Fader CC{cc_number} = {value} → {rule_id} level {level}")
 		bridge.apply_rule(rule_id, level=level)
 
+	def preset_check_loop():
+		while True:
+			time.sleep(preset_check_interval)
+			try:
+				if bridge.check_and_sync():
+					print(f"Preset changed, re-synced to: {bridge.get_preset()}")
+			except Exception as e:
+				print(f"Preset check error: {e}")
+
 	def list_midi_inputs():
 		print("Available MIDI inputs:")
 		for name in mido.get_input_names():
@@ -57,7 +69,11 @@ if __name__ == "__main__":
 
 		bridge = Bridge()
 		bridge.sync()
-		print("Bridge connected and synced")
+		print(f"Bridge connected and synced to preset: {bridge.get_preset()}")
+
+		preset_thread = threading.Thread(target=preset_check_loop, daemon=True)
+		preset_thread.start()
+		print(f"Preset change detection active (checking every {preset_check_interval}s)")
 
 		input_name = None
 		for name in mido.get_input_names():
@@ -79,3 +95,4 @@ if __name__ == "__main__":
 					handle_cc(msg.control, msg.value)
 
 	main()
+

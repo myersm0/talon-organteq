@@ -281,6 +281,21 @@ class Bridge:
 	def get_state(self) -> dict:
 		return self.prolog.get_state()
 
+	def get_preset(self) -> str:
+		return self.organteq.get_preset()
+
+	def check_and_sync(self) -> bool:
+		"""Check if preset changed since last sync. If so, sync and return True."""
+		result = self.get_state()
+		if result.get("status") == "ok":
+			state = result.get("state", {})
+			last_preset = state.get("preset", "")
+			current_preset = self.get_preset()
+			if current_preset and current_preset != last_preset:
+				self.sync()
+				return True
+		return False
+
 	def _normalize_selector(self, selector: Any) -> Any:
 		if isinstance(selector, list):
 			if all(isinstance(x, int) for x in selector):
