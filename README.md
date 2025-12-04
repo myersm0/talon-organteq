@@ -38,7 +38,9 @@ cd prolog
 swipl -g "consult('main.pl'), server(5000)."
 ```
 
-3. From Python:
+From here, you may control Organteq either from Python or via Talon voice. See [talon/README.md](talon/README.md) for the voice interface.
+
+Here's an example of basic usage for the Python API:
 ```python
 from client import Bridge
 
@@ -61,8 +63,6 @@ bridge.disengage_family("swell", "mixture")
 bridge.undo()
 bridge.redo()
 ```
-
-From here, you may control Organteq either from Python or via Talon voice. See [talon/README.md](talon/README.md) for the voice interface.
 
 ## Documentation
 - [Python API reference](docs/api-reference.md) - Complete Bridge class documentation
