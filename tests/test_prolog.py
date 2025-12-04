@@ -1,9 +1,20 @@
 """
+test_prolog.py - Integration tests for the Prolog server
+
+Prerequisites:
+1. Prolog server must be running on port 5000
+2. Example rules must be loaded
+
 Start server from the prolog directory:
-    cd prolog && swipl -g "consult('main.pl'), load_rules_from_dir('../examples', 'custom_rules.pl'), server(5000)."
+    cd prolog && swipl -g "consult('main.pl'), load_rules_from_dir('.', 'rules_example.pl'), server(5000)."
 
 Run tests:
     python -m unittest tests.test_prolog -v
+
+If persistent rule tests fail with 'unknown_rule' error, verify:
+1. rules_example.pl exists in the prolog directory
+2. Server was started with load_rules_from_dir as shown above
+3. Prolog files are up to date (copy from outputs if needed)
 """
 
 import unittest
@@ -441,30 +452,177 @@ class TestRuleLoading(unittest.TestCase):
 class TestPresetSpecificSelectors(unittest.TestCase):
 	"""Tests for preset-specific rule selectors.
 	
-	These tests require rules with for_preset() wrappers.
-	Skip if the rules file doesn't define preset-specific variants.
+	These tests verify that:
+	1. Preset-specific selectors take priority over universal selectors
+	2. computed_max_level returns correct values per preset
+	3. Universal selectors only fire when no preset-specific match exists
 	"""
 
-	def test_baroque_preset_applies_rule(self):
-		sync_test_state(preset="Baroque Cathedral")
-		result = execute("apply_rule", {"rule": "my persistent rule #1", "level": 1})
-		if result["status"] == "error" and "no_matching_selector" in str(result):
-			self.skipTest("Rule doesn't have preset-specific selectors")
-		self.assertEqual(result["status"], "ok")
+	def setUp(self):
+		sync_test_state(preset="Test Preset")
+		# Clear any existing test rules
+		execute("retract_facts", {"patterns": [
+			"state:rule(test_preset_rule, _)",
+			"state:rule_selector(test_preset_rule, _, _, _)"
+		]})
+		# Define a test rule with both preset-specific and universal selectors
+		execute("assert_facts", {"facts": [
+			"state:rule(test_preset_rule, persistent)",
+			# Preset-specific: levels 1-2 for 'Test Preset*'
+			"state:rule_selector(test_preset_rule, 1, great, for_preset('Test Preset*', numbers([1, 2])))",
+			"state:rule_selector(test_preset_rule, 2, great, for_preset('Test Preset*', numbers([3])))",
+			# Universal fallback: levels 1-3
+			"state:rule_selector(test_preset_rule, 1, great, numbers([4, 5]))",
+			"state:rule_selector(test_preset_rule, 2, great, numbers([6]))",
+			"state:rule_selector(test_preset_rule, 3, great, numbers([7]))"
+		]})
 
-	def test_romantic_preset_applies_rule(self):
-		sync_test_state(preset="Romantic Abbey")
-		result = execute("apply_rule", {"rule": "my persistent rule #1", "level": 1})
-		if result["status"] == "error" and "no_matching_selector" in str(result):
-			self.skipTest("Rule doesn't have preset-specific selectors")
-		self.assertEqual(result["status"], "ok")
+	def test_preset_specific_max_level(self):
+		"""Preset-specific selectors determine max_level when they match."""
+		sync_test_state(preset="Test Preset Matching")
+		result = execute("get_rule_info", {"rule": "test_preset_rule"})
+		if result["status"] == "error":
+			self.skipTest("get_rule_info not available or rule not found")
+		# Should be 2 (max of preset-specific), not 3 (max of universal)
+		self.assertEqual(result["state"]["max_level"], 2)
 
-	def test_other_preset_applies_rule(self):
-		sync_test_state(preset="Neo-Classical Church")
-		result = execute("apply_rule", {"rule": "my persistent rule #1", "level": 1})
-		if result["status"] == "error" and "no_matching_selector" in str(result):
-			self.skipTest("Rule doesn't have preset-specific selectors")
+	def test_universal_max_level(self):
+		"""Universal selectors determine max_level when no preset-specific match."""
+		sync_test_state(preset="Unknown Preset")
+		result = execute("get_rule_info", {"rule": "test_preset_rule"})
+		if result["status"] == "error":
+			self.skipTest("get_rule_info not available or rule not found")
+		# Should be 3 (max of universal)
+		self.assertEqual(result["state"]["max_level"], 3)
+
+	def test_preset_specific_selectors_fire(self):
+		"""Only preset-specific selectors fire when they match."""
+		sync_test_state(preset="Test Preset Matching")
+		result = execute("apply_rule", {"rule": "test_preset_rule", "level": 1})
+		if result["status"] == "error":
+			self.skipTest(f"Rule application failed: {result}")
+		engaged = get_engaged(result, "great")
+		# Should engage stops 1, 2 (preset-specific), NOT 4, 5 (universal)
+		self.assertIn(1, engaged)
+		self.assertIn(2, engaged)
+		self.assertNotIn(4, engaged)
+		self.assertNotIn(5, engaged)
+
+	def test_universal_selectors_fire_when_no_match(self):
+		"""Universal selectors fire when no preset-specific match."""
+		sync_test_state(preset="Unknown Preset")
+		result = execute("apply_rule", {"rule": "test_preset_rule", "level": 1})
+		if result["status"] == "error":
+			self.skipTest(f"Rule application failed: {result}")
+		engaged = get_engaged(result, "great")
+		# Should engage stops 4, 5 (universal), NOT 1, 2 (preset-specific)
+		self.assertIn(4, engaged)
+		self.assertIn(5, engaged)
+		self.assertNotIn(1, engaged)
+		self.assertNotIn(2, engaged)
+
+	def test_preset_specific_level_2(self):
+		"""Preset-specific level 2 engages correct stops."""
+		sync_test_state(preset="Test Preset Matching")
+		result = execute("apply_rule", {"rule": "test_preset_rule", "level": 2})
+		if result["status"] == "error":
+			self.skipTest(f"Rule application failed: {result}")
+		engaged = get_engaged(result, "great")
+		# Level 2 cumulative: stops 1, 2, 3 from preset-specific
+		self.assertIn(1, engaged)
+		self.assertIn(2, engaged)
+		self.assertIn(3, engaged)
+		# NOT stops 4, 5, 6 from universal
+		self.assertNotIn(4, engaged)
+		self.assertNotIn(5, engaged)
+		self.assertNotIn(6, engaged)
+
+	def test_universal_level_3(self):
+		"""Universal level 3 engages correct stops."""
+		sync_test_state(preset="Unknown Preset")
+		result = execute("apply_rule", {"rule": "test_preset_rule", "level": 3})
+		if result["status"] == "error":
+			self.skipTest(f"Rule application failed: {result}")
+		engaged = get_engaged(result, "great")
+		# Level 3 cumulative: stops 4, 5, 6, 7 from universal
+		self.assertIn(4, engaged)
+		self.assertIn(5, engaged)
+		self.assertIn(6, engaged)
+		self.assertIn(7, engaged)
+		# NOT stops 1, 2, 3 from preset-specific
+		self.assertNotIn(1, engaged)
+		self.assertNotIn(2, engaged)
+		self.assertNotIn(3, engaged)
+
+	def test_preset_glob_pattern_matching(self):
+		"""Glob patterns in for_preset match correctly."""
+		# 'Test Preset*' should match 'Test Preset Matching' and 'Test Preset Other'
+		sync_test_state(preset="Test Preset Other Variant")
+		result = execute("apply_rule", {"rule": "test_preset_rule", "level": 1})
+		if result["status"] == "error":
+			self.skipTest(f"Rule application failed: {result}")
+		engaged = get_engaged(result, "great")
+		# Should use preset-specific due to glob match
+		self.assertIn(1, engaged)
+		self.assertIn(2, engaged)
+		self.assertNotIn(4, engaged)
+		self.assertNotIn(5, engaged)
+
+
+class TestAliases(unittest.TestCase):
+	"""Tests for stop name aliases."""
+
+	def setUp(self):
+		sync_test_state()
+
+	def test_exact_name_match(self):
+		"""Exact name matches work."""
+		result = execute("engage", {"division": "great", "selector": {"by": "names", "values": ["Bourdon 16'"]}})
 		self.assertEqual(result["status"], "ok")
+		engaged = get_engaged(result, "great")
+		self.assertIn(1, engaged)
+
+	def test_alias_fallback(self):
+		"""Alias match works when exact match fails."""
+		# Sync with Gedackt instead of Gedact
+		elements = [
+			{"division": "great", "number": 1, "name": "Gedackt 8'", "type": "stop"},
+			{"division": "great", "number": 2, "name": "Montre 8'", "type": "stop"},
+		]
+		execute("sync", {"preset": "Alias Test", "elements": elements, "engaged": []})
+		# Request Gedact - should find Gedackt via alias
+		result = execute("engage", {"division": "great", "selector": {"by": "names", "values": ["Gedact 8'"]}})
+		self.assertEqual(result["status"], "ok")
+		engaged = get_engaged(result, "great")
+		self.assertIn(1, engaged)
+
+	def test_alias_respects_footage(self):
+		"""Alias matching respects footage."""
+		elements = [
+			{"division": "great", "number": 1, "name": "Gedackt 8'", "type": "stop"},
+			{"division": "great", "number": 2, "name": "Gedackt 4'", "type": "stop"},
+		]
+		execute("sync", {"preset": "Alias Footage Test", "elements": elements, "engaged": []})
+		# Request Gedact 8' - should only match Gedackt 8', not 4'
+		result = execute("engage", {"division": "great", "selector": {"by": "names", "values": ["Gedact 8'"]}})
+		self.assertEqual(result["status"], "ok")
+		engaged = get_engaged(result, "great")
+		self.assertIn(1, engaged)
+		self.assertNotIn(2, engaged)
+
+	def test_no_alias_when_exact_exists(self):
+		"""Exact match takes precedence over alias."""
+		elements = [
+			{"division": "great", "number": 1, "name": "Gedact 8'", "type": "stop"},
+			{"division": "great", "number": 2, "name": "Gedackt 8'", "type": "stop"},
+		]
+		execute("sync", {"preset": "Alias Precedence Test", "elements": elements, "engaged": []})
+		# Request Gedact 8' - should match exact Gedact, not fall back to Gedackt alias
+		result = execute("engage", {"division": "great", "selector": {"by": "names", "values": ["Gedact 8'"]}})
+		self.assertEqual(result["status"], "ok")
+		engaged = get_engaged(result, "great")
+		self.assertIn(1, engaged)
+		self.assertEqual(len(engaged), 1)
 
 
 class TestListRules(unittest.TestCase):
