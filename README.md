@@ -8,7 +8,7 @@ Organteq is a trademark of Modartt. This project is not affiliated with or endor
 ## Motivation
 Traditionally, organ registration involves manipulating stops at either a very fine or a very coarse granularity: either via individual stops, or via activation of pre-recorded combinations which must be planned in advance and which affect organ state globally (typically across all manuals).
 
-The system prototyped in this repo introduces a different way. You can still manipulate stops individually. But you can also group them in arbitrary ways and manipulate each of those groups as units: mix them together, subtract one from another, layer them conditionally on top of each other, etc. Anything that can be expressed logically in terms of known properties of the state of your organ in Organteq, you can express it with these tools.
+The system prototyped in this repo introduces a different way. You can still manipulate stops individually. But you can also group them in arbitrary ways and manipulate each of those groups as units: mix them together, subtract one from another, layer them conditionally on top of each other, etc. Anything that can be expressed logically in terms of known properties of the state of your organ in Organteq, or characteristics of the stops themselves, you can express it with these tools.
 
 This system is driven by _formal logic_, specifically by the reasoning tool called Prolog. While Prolog is not new, recent advances in voice recognition technology make it newly practical in application here.
 
