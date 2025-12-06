@@ -73,6 +73,20 @@ app: /organteq/i
 	user.organteq_solo_family(manual, organteq_tonal_family, footage)
 
 
+# couplers
+^couple {user.organteq_stop_number}$:
+	user.organteq_couple_index(organteq_stop_number)
+
+^decouple {user.organteq_stop_number}$:
+	user.organteq_decouple_index(organteq_stop_number)
+
+^couple {user.organteq_manual} [to] {user.organteq_manual}$:
+	user.organteq_couple_manuals(organteq_manual_1, organteq_manual_2)
+
+^decouple {user.organteq_manual} [to|from] {user.organteq_manual}$:
+	user.organteq_decouple_manuals(organteq_manual_1, organteq_manual_2)
+
+
 # state and context management
 ^(with|use|using) {user.organteq_manual}$:
 	user.organteq_set_manual(organteq_manual)

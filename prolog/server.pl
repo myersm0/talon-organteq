@@ -251,6 +251,30 @@ execute_command(get_rule_info, Args, [], _) :-
 	\+ rule(RuleId, _),
 	throw(unknown_rule(RuleId)).
 
+% --- resolve_coupler ---
+execute_command(resolve_coupler, Args, [], State) :-
+	get_dict(source, Args, SourceStr),
+	get_dict(destination, Args, DestStr),
+	atom_string(Source, SourceStr),
+	atom_string(Dest, DestStr),
+	state:current_preset(Preset),
+	couplers:coupler_mapping(Preset, Index, Source, Dest, unison, _),
+	!,
+	State = _{index: Index}.
+
+execute_command(resolve_coupler, Args, [], State) :-
+	% fallback: try any preset if exact match fails
+	get_dict(source, Args, SourceStr),
+	get_dict(destination, Args, DestStr),
+	atom_string(Source, SourceStr),
+	atom_string(Dest, DestStr),
+	couplers:coupler_mapping(_, Index, Source, Dest, unison, _),
+	!,
+	State = _{index: Index}.
+
+execute_command(resolve_coupler, _, [], _) :-
+	throw(error(coupler_not_found, _)).
+
 % ============================================================================
 % Helper predicates
 % ============================================================================

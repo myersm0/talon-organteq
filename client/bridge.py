@@ -306,3 +306,40 @@ class Bridge:
 		if isinstance(selector, str):
 			return selector
 		return selector
+
+	def couple(self, index: int = None, source: str = None, destination: str = None) -> dict:
+		if index is not None:
+			self.organteq.set_coupler(index, 1.0)
+			return {"status": "ok"}
+		if not (source and destination):
+			return {"status": "error", "message": "must provide index or source/destination"}
+		result = self.prolog.execute("resolve_coupler", {
+			"source": source,
+			"destination": destination
+		})
+		if result.get("status") != "ok":
+			return {"status": "error", "message": "coupler resolution failed"}
+		idx = result.get("state", {}).get("index")
+		if not idx:
+			return {"status": "error", "message": "coupler not found"}
+		self.organteq.set_coupler(idx, 1.0)
+		return {"status": "ok"}
+
+	def decouple(self, index: int = None, source: str = None, destination: str = None) -> dict:
+		if index is not None:
+			self.organteq.set_coupler(index, 0.0)
+			return {"status": "ok"}
+		if not (source and destination):
+			return {"status": "error", "message": "must provide index or source/destination"}
+		result = self.prolog.execute("resolve_coupler", {
+			"source": source,
+			"destination": destination
+		})
+		if result.get("status") != "ok":
+			return {"status": "error", "message": "coupler resolution failed"}
+		idx = result.get("state", {}).get("index")
+		if not idx:
+			return {"status": "error", "message": "coupler not found"}
+		self.organteq.set_coupler(idx, 0.0)
+		return {"status": "ok"}
+

@@ -104,3 +104,19 @@ class Actions:
 		"""sync engine state with Organteq"""
 		get_bridge().sync()
 
+	def organteq_couple_index(index: int):
+		"""couple by index"""
+		get_bridge().couple(index=index)
+
+	def organteq_decouple_index(index: int):
+		"""decouple by index"""
+		get_bridge().decouple(index=index)
+
+	def organteq_couple_manuals(source: str, destination: str):
+		"""couple source manual to destination manual"""
+		get_bridge().couple(source=source, destination=destination)
+
+	def organteq_decouple_manuals(source: str, destination: str):
+		"""decouple source manual from destination manual"""
+		get_bridge().decouple(source=source, destination=destination)
+
