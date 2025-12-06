@@ -67,6 +67,10 @@ def gui_rule_status(gui: imgui.GUI):
 
 @mod.action_class
 class Actions:
+	def organteq_rule_set_level(rule: str, level: int):
+		"""set a rule to a specific level"""
+		get_bridge().apply_rule(rule, level=level)
+
 	def organteq_rule_up(rules: list[str]):
 		"""increment level for rules"""
 		b = get_bridge()

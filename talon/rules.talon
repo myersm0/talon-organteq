@@ -8,6 +8,9 @@ app: /organteq/i
 ^down {user.organteq_rule}+$:
 	user.organteq_rule_down(organteq_rule_list)
 
+^{user.organteq_rule} <number_small>:
+	user.organteq_rule_set_level(organteq_rule, number_small)
+
 
 # absolute operations
 ^maximize {user.organteq_rule}+$:
@@ -22,6 +25,10 @@ app: /organteq/i
 
 # solo and reassert
 ^solo {user.organteq_rule}$:
+	user.organteq_rule_solo(organteq_rule)
+
+^solo {user.organteq_rule} <number_small>$:
+	user.organteq_rule_set_level(organteq_rule, number_small)
 	user.organteq_rule_solo(organteq_rule)
 
 ^reassert {user.organteq_rule}$:
@@ -39,3 +46,4 @@ app: /organteq/i
 
 ^hide rules$:
 	user.organteq_hide_rules()
+
