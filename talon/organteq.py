@@ -19,6 +19,10 @@ mod = Module()
 
 @mod.action_class
 class Actions:
+	def organteq_get_bridge():
+		"""get the shared bridge instance"""
+		return get_bridge()
+
 	def organteq_set_manual(manual: str):
 		"""set the current manual context"""
 		global current_manual
