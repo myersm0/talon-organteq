@@ -31,8 +31,8 @@
 % Transient rules
 % ============================================================================
 
-:- use_module(helpers).
-:- use_module(state, [manual/1]).
+:- use_module(core(helpers)).
+:- use_module(config(divisions), [manual/1]).
 
 :- multifile state:rule_predicate/1.
 :- multifile state:rule_action/2.
@@ -47,7 +47,7 @@ state:rule_predicate(darken).
 % brighten: engage one disengaged mixture per manual; if none, one mutation
 state:rule_action(brighten, Actions) :-
 	findall(Action, (
-		manual(Div),
+		divisions:manual(Div),
 		brighten_one(Div, Action)
 	), Actions).
 
@@ -59,7 +59,7 @@ brighten_one(Div, engage(Div, N)) :-
 % darken: disengage one engaged mutation per manual; if none, one mixture
 state:rule_action(darken, Actions) :-
 	findall(Action, (
-		manual(Div),
+		divisions:manual(Div),
 		darken_one(Div, Action)
 	), Actions).
 

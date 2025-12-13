@@ -73,19 +73,19 @@ clear(Division) :-
 clear_all :- organteq:execute_live("clear_all", _).
 
 up(RuleId) :-
-	format(string(Cmd), "up(~w)", [RuleId]),
+	format(string(Cmd), "up(~q)", [RuleId]),
 	organteq:execute_live(Cmd, _).
 
 down(RuleId) :-
-	format(string(Cmd), "down(~w)", [RuleId]),
+	format(string(Cmd), "down(~q)", [RuleId]),
 	organteq:execute_live(Cmd, _).
 
 level(RuleId, Level) :-
-	format(string(Cmd), "level(~w, ~w)", [RuleId, Level]),
+	format(string(Cmd), "level(~q, ~w)", [RuleId, Level]),
 	organteq:execute_live(Cmd, _).
 
 mute(RuleId) :-
-	format(string(Cmd), "mute(~w)", [RuleId]),
+	format(string(Cmd), "mute(~q)", [RuleId]),
 	organteq:execute_live(Cmd, _).
 
 :- initialization((
