@@ -1,10 +1,7 @@
 app: /organteq/i
 -
 
-# =============================================================================
 # Stop control by number - specific manual
-# =============================================================================
-
 ^[toggle] {user.organteq_manual} {user.organteq_stop_number}+$:
 	user.organteq_toggle(organteq_manual, organteq_stop_number_list)
 
@@ -18,10 +15,7 @@ app: /organteq/i
 	user.organteq_solo(organteq_manual, organteq_stop_number_list)
 
 
-# =============================================================================
 # Stop control by number - current manual context
-# =============================================================================
-
 ^[toggle] {user.organteq_stop_number}+$:
 	manual = user.organteq_get_manual()
 	user.organteq_toggle(manual, organteq_stop_number_list)
@@ -39,10 +33,7 @@ app: /organteq/i
 	user.organteq_solo(manual, organteq_stop_number_list)
 
 
-# =============================================================================
 # Stop control by family - specific manual
-# =============================================================================
-
 ^[toggle] {user.organteq_manual} [{user.organteq_footage}] {user.organteq_tonal_family}$:
 	footage = organteq_footage or ""
 	user.organteq_toggle_family(organteq_manual, organteq_tonal_family, footage)
@@ -60,10 +51,7 @@ app: /organteq/i
 	user.organteq_solo_family(organteq_manual, organteq_tonal_family, footage)
 
 
-# =============================================================================
 # Stop control by family - current manual context
-# =============================================================================
-
 ^[toggle] [{user.organteq_footage}] {user.organteq_tonal_family}$:
 	manual = user.organteq_get_manual()
 	footage = organteq_footage or ""
@@ -85,10 +73,7 @@ app: /organteq/i
 	user.organteq_solo_family(manual, organteq_tonal_family, footage)
 
 
-# =============================================================================
 # Stop control by named selector - specific manual
-# =============================================================================
-
 ^[toggle] {user.organteq_manual} {user.organteq_selector}$:
 	user.organteq_toggle_selector(organteq_manual, organteq_selector)
 
@@ -102,10 +87,7 @@ app: /organteq/i
 	user.organteq_solo_selector(organteq_manual, organteq_selector)
 
 
-# =============================================================================
 # Stop control by named selector - current manual context
-# =============================================================================
-
 ^[toggle] {user.organteq_selector}$:
 	manual = user.organteq_get_manual()
 	user.organteq_toggle_selector(manual, organteq_selector)
@@ -123,10 +105,7 @@ app: /organteq/i
 	user.organteq_solo_selector(manual, organteq_selector)
 
 
-# =============================================================================
 # Auxiliaries
-# =============================================================================
-
 ^couple {user.organteq_stop_number}$:
 	user.organteq_couple_index(organteq_stop_number)
 
@@ -166,10 +145,8 @@ app: /organteq/i
 ^decouple {user.organteq_mono_coupler}$:
 	user.organteq_mono_decouple_name(organteq_mono_coupler)
 
-# =============================================================================
-# Rules - level control
-# =============================================================================
 
+# Rules - level control
 ^[up] {user.organteq_rule}+$:
 	user.organteq_rule_up(organteq_rule_list)
 
@@ -180,10 +157,7 @@ app: /organteq/i
 	user.organteq_rule_set_level(organteq_rule, number_small)
 
 
-# =============================================================================
 # Rules - absolute operations
-# =============================================================================
-
 ^maximize {user.organteq_rule}+$:
 	user.organteq_rule_maximize(organteq_rule_list)
 
@@ -194,10 +168,7 @@ app: /organteq/i
 	user.organteq_rule_mute(organteq_rule_list)
 
 
-# =============================================================================
 # Rules - solo and reassert
-# =============================================================================
-
 ^solo {user.organteq_rule}$:
 	user.organteq_rule_solo(organteq_rule)
 
@@ -209,18 +180,12 @@ app: /organteq/i
 	user.organteq_rule_reassert(organteq_rule)
 
 
-# =============================================================================
 # Transient rules (invoked by name alone)
-# =============================================================================
-
 ^{user.organteq_transient}$:
 	user.organteq_transient(organteq_transient)
 
 
-# =============================================================================
 # Manual context and clearing
-# =============================================================================
-
 ^(with|use|using) {user.organteq_manual}$:
 	user.organteq_set_manual(organteq_manual)
 
@@ -238,10 +203,7 @@ app: /organteq/i
 	user.organteq_clear("swell")
 
 
-# =============================================================================
 # Undo/redo
-# =============================================================================
-
 ^undo$:
 	user.organteq_undo()
 
@@ -249,10 +211,7 @@ app: /organteq/i
 	user.organteq_redo()
 
 
-# =============================================================================
 # Sync and GUI
-# =============================================================================
-
 ^sync [registration|registrations]$:
 	user.organteq_sync()
 

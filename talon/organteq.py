@@ -108,11 +108,7 @@ def gui_help(gui: imgui.GUI):
 
 @mod.action_class
 class Actions:
-
-	# =========================================================================
-	# Bridge and context
-	# =========================================================================
-
+	## Bridge and context
 	def organteq_get_bridge():
 		"""get the shared bridge instance"""
 		return get_bridge()
@@ -131,10 +127,7 @@ class Actions:
 		get_bridge().sync()
 		update_lists()
 
-	# =========================================================================
-	# Stop control by number
-	# =========================================================================
-
+	## Stop control by number
 	def organteq_engage(manual: str, stops: list[str]):
 		"""engage stops by number"""
 		nums = ", ".join(stops)
@@ -159,10 +152,7 @@ class Actions:
 		"""clear all stops on a manual"""
 		get_bridge().run(f"clear({manual})")
 
-	# =========================================================================
-	# Stop control by family
-	# =========================================================================
-
+	## Stop control by family
 	def organteq_engage_family(manual: str, family: str, footage: str = ""):
 		"""engage stops by family and optional footage"""
 		sel = f"family({family}, {footage})" if footage else f"family({family})"
@@ -183,10 +173,7 @@ class Actions:
 		sel = f"family({family}, {footage})" if footage else f"family({family})"
 		run_action("solo", manual, sel)
 
-	# =========================================================================
-	# Stop control by named selector
-	# =========================================================================
-
+	## Stop control by named selector
 	def organteq_engage_selector(manual: str, selector: str):
 		"""engage stops by named selector"""
 		run_action("engage", manual, selector)
@@ -203,9 +190,7 @@ class Actions:
 		"""solo stops by named selector"""
 		run_action("solo", manual, selector)
 
-	# =========================================================================
-	# Auxiliaries
-	# =========================================================================
+	## Auxiliaries
 	def organteq_couple_index(index: int):
 		"""couple by index"""
 		get_bridge().run(f"couple_index({index})")
@@ -250,10 +235,7 @@ class Actions:
 		"""disengage mono coupler by name"""
 		get_bridge().run(f"mono_decouple('{name}')")
 
-	# =========================================================================
-	# Rules
-	# =========================================================================
-
+	## Rules
 	def organteq_rule_up(rules: list[str]):
 		"""increment level for rules"""
 		b = get_bridge()
@@ -300,10 +282,7 @@ class Actions:
 		"""apply a transient rule (increment by 1)"""
 		get_bridge().apply_rule(rule, delta=1)
 
-	# =========================================================================
-	# Undo/redo
-	# =========================================================================
-
+	## Undo/redo
 	def organteq_undo():
 		"""undo last operation"""
 		get_bridge().run("undo")
@@ -312,10 +291,7 @@ class Actions:
 		"""redo last undone operation"""
 		get_bridge().run("redo")
 
-	# =========================================================================
-	# GUI
-	# =========================================================================
-
+	## GUI
 	def organteq_show_help():
 		"""show the help overlay"""
 		gui_help.show()
@@ -331,10 +307,7 @@ class Actions:
 		else:
 			gui_help.show()
 
-	# =========================================================================
-	# Advanced
-	# =========================================================================
-
+	## Advanced
 	def organteq_execute(command: str):
 		"""execute arbitrary command string"""
 		get_bridge().run(command)
