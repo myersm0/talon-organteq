@@ -1,43 +1,56 @@
-% rules.pl - Rule application logic
-% This is the rule ENGINE, not user-defined rules
+% Rule application engine
 
 :- module(rules, [
 	rule_elements_at_level/4,
 	rule_elements_cumulative/4,
 	rule_divisions/2,
-	apply_rule_impl/5
+	apply_rule/5,
+	make_rpc_action/4
 ]).
 
 :- use_module(library(apply), [partition/4]).
 
 :- use_module(state, [
-	element/4, engaged/2, current_preset/1,
-	rule/2, max_level/2, antonym/2,
-	rule_predicate/1, rule_action/2,
-	rule_selector/3, rule_selector/4, rule_selector/5,
-	do_engage/2, do_disengage/2,
-	claim/3, release/3, still_owned_after_release/3,
-	get_rule_level/2, set_rule_level/2,
-	manuals/1, auxiliaries/1, all_divisions/1,
-	rpc_action/4,
+	element/4,
+	engaged/2,
+	current_preset/1,
+	rule/2,
+	rule_predicate/1,
+	rule_action/2,
+	rule_selector/3,
+	rule_selector/4,
+	rule_selector/5,
+	do_engage/2,
+	do_disengage/2,
+	claim/3,
+	release/3,
+	still_owned_after_release/3,
+	get_rule_level/2,
+	set_rule_level/2,
+	manuals/1,
+	all_divisions/1,
+	auxiliaries/1,
 	json_to_atom/2
 ]).
+
 :- use_module(selectors, [
-	resolve_selector/3, preset_matches/2, uses_for_preset/1, selector_matches_preset/2, computed_max_level/3,
-	effective_rule_selector/3, effective_rule_selector/4, effective_rule_selector/5
+	resolve_selector/3,
+	preset_matches/2,
+	uses_for_preset/1,
+	selector_matches_preset/2,
+	computed_max_level/3,
+	effective_rule_selector/3,
+	effective_rule_selector/4,
+	effective_rule_selector/5
 ]).
 
 % ============================================================================
 % Rule divisions inference
 % ============================================================================
 
-% For predicate-based rules, return empty list (predicate handles its own divisions)
 rule_divisions(RuleId, []) :-
 	rule_predicate(RuleId), !.
 
-% For selector-based rules, infer from selectors:
-% - 3-arg selectors (no division) -> all manuals
-% - 4-arg and 5-arg selectors -> explicit divisions (expand 'all')
 rule_divisions(RuleId, Divisions) :-
 	findall(Div, rule_selector_division(RuleId, Div), AllDivs),
 	sort(AllDivs, Divisions).
@@ -65,16 +78,6 @@ expand_division(Div, Div) :-
 % Rule element computation
 % ============================================================================
 
-% rule_selector forms:
-%   rule_selector(RuleId, Level, Selector) - all divisions, engage (default)
-%   rule_selector(RuleId, Level, Division, Selector) - specific division, engage (default)
-%   rule_selector(RuleId, Level, Division, Selector, Action) - full form with action
-%
-% Selectors can be wrapped with for_preset(Pattern, InnerSelector) to make them
-% preset-specific. If any preset-specific selectors match the current preset,
-% universal selectors are ignored.
-
-% For persistent rules, we just need the elements (always engage)
 rule_elements_at_level(RuleId, Level, Division, Elements) :-
 	get_prioritized_selectors(RuleId, Level, Division, Selectors),
 	findall(E, (
@@ -84,7 +87,6 @@ rule_elements_at_level(RuleId, Level, Division, Elements) :-
 	), All),
 	sort(All, Elements).
 
-% For transient rules, we need element-action pairs
 rule_element_actions_at_level(RuleId, Level, Division, ElementActions) :-
 	get_prioritized_selectors(RuleId, Level, Division, Selectors),
 	findall(E-Action, (
@@ -94,7 +96,6 @@ rule_element_actions_at_level(RuleId, Level, Division, ElementActions) :-
 	), All),
 	sort(All, ElementActions).
 
-% Collect all selectors, then prioritize preset-specific over universal
 get_prioritized_selectors(RuleId, Level, Division, Selectors) :-
 	findall(Sel-Act, get_selector_for_level(RuleId, Level, Division, Sel, Act), AllSelectors),
 	current_preset(Preset),
@@ -108,7 +109,6 @@ is_matching_preset_selector(Preset, Selector-_) :-
 	uses_for_preset(Selector),
 	selector_matches_preset(Selector, Preset).
 
-% Unified selector lookup - returns Selector and Action for a given rule/level/division
 get_selector_for_level(RuleId, Level, Division, Selector, Action) :-
 	effective_rule_selector(RuleId, Level, Div, Selector, Action),
 	(Div = Division ; Div = all).
@@ -141,56 +141,62 @@ resolve_divisions(Single, [Div]) :-
 	json_to_atom(Single, Div).
 
 % ============================================================================
-% Rule application implementation
+% Rule application - main entry point
 % ============================================================================
+% apply_rule(RuleId, Action, Delta, Level, RPCActions)
+% Action: none | mute | maximize | minimize | solo | reassert
+% Delta: none | integer
+% Level: none | integer
 
-% Error for unknown rules - must be first clause
-% Predicate-based rules bypass level/delta logic entirely
-apply_rule_impl(RuleId, _, _, _, Actions) :-
+apply_rule(RuleId, _, _, _, _) :-
+	\+ rule(RuleId, _),
+	throw(error(unknown_rule(RuleId), context(apply_rule/5, 'Rule not defined'))).
+
+apply_rule(RuleId, _, _, _, Actions) :-
 	rule_predicate(RuleId),
 	!,
 	apply_predicate_rule(RuleId, Actions).
 
-apply_rule_impl(RuleId, mute, _, _, Actions) :-
+apply_rule(RuleId, mute, _, _, Actions) :-
 	rule(RuleId, Type),
 	rule_divisions(RuleId, Divisions),
 	(Type = persistent ->
-		apply_persistent_rule_to_level(RuleId, 0, Divisions, Actions)
+		apply_persistent_to_level(RuleId, 0, Divisions, Actions)
 	;   set_rule_level(RuleId, 0),
 		Actions = []
 	).
 
-apply_rule_impl(RuleId, maximize, _, _, Actions) :-
+apply_rule(RuleId, maximize, _, _, Actions) :-
 	current_preset(Preset),
 	computed_max_level(RuleId, Preset, MaxLevel),
 	rule(RuleId, Type),
 	rule_divisions(RuleId, Divisions),
 	(Type = persistent ->
-		apply_persistent_rule_to_level(RuleId, MaxLevel, Divisions, Actions)
-	;   apply_transient_rule_to_level(RuleId, MaxLevel, Divisions, Actions)
+		apply_persistent_to_level(RuleId, MaxLevel, Divisions, Actions)
+	;   apply_transient(RuleId, Divisions, Actions)
 	).
 
-apply_rule_impl(RuleId, minimize, _, _, Actions) :-
+apply_rule(RuleId, minimize, _, _, Actions) :-
 	rule(RuleId, Type),
 	rule_divisions(RuleId, Divisions),
 	(Type = persistent ->
-		apply_persistent_rule_to_level(RuleId, 1, Divisions, Actions)
-	;   apply_transient_rule_to_level(RuleId, 1, Divisions, Actions)
+		apply_persistent_to_level(RuleId, 1, Divisions, Actions)
+	;   apply_transient(RuleId, Divisions, Actions)
 	).
 
-apply_rule_impl(RuleId, solo, _, _, Actions) :-
+apply_rule(RuleId, solo, _, _, Actions) :-
 	get_rule_level(RuleId, CurrentLevel),
 	CurrentLevel > 0,
 	rule_divisions(RuleId, Divisions),
-	solo_rule_impl(RuleId, CurrentLevel, Divisions, Actions).
+	solo_impl(RuleId, CurrentLevel, Divisions, Actions).
 
-apply_rule_impl(RuleId, reassert, _, _, Actions) :-
+apply_rule(RuleId, reassert, _, _, Actions) :-
 	get_rule_level(RuleId, CurrentLevel),
 	CurrentLevel > 0,
 	rule_divisions(RuleId, Divisions),
-	reassert_rule_impl(RuleId, CurrentLevel, Divisions, Actions).
+	reassert_impl(RuleId, CurrentLevel, Divisions, Actions).
 
-apply_rule_impl(RuleId, none, Delta, none, Actions) :-
+apply_rule(RuleId, none, Delta, none, Actions) :-
 	Delta \= none,
 	rule(RuleId, Type),
 	rule_divisions(RuleId, Divisions),
@@ -199,11 +205,14 @@ apply_rule_impl(RuleId, none, Delta, none, Actions) :-
 	computed_max_level(RuleId, Preset, MaxLevel),
 	NewLevel is max(0, min(CurrentLevel + Delta, MaxLevel)),
 	(Type = persistent ->
-		apply_persistent_rule_to_level(RuleId, NewLevel, Divisions, Actions)
-	;   apply_transient_rule_delta(RuleId, Delta, Divisions, Actions)
+		apply_persistent_to_level(RuleId, NewLevel, Divisions, Actions)
+	;   (Delta > 0 ->
+			apply_transient(RuleId, Divisions, Actions)
+		;   Actions = []
+		)
 	).
 
-apply_rule_impl(RuleId, none, none, Level, Actions) :-
+apply_rule(RuleId, none, none, Level, Actions) :-
 	Level \= none,
 	rule(RuleId, Type),
 	rule_divisions(RuleId, Divisions),
@@ -211,22 +220,21 @@ apply_rule_impl(RuleId, none, none, Level, Actions) :-
 	computed_max_level(RuleId, Preset, MaxLevel),
 	ClampedLevel is max(0, min(Level, MaxLevel)),
 	(Type = persistent ->
-		apply_persistent_rule_to_level(RuleId, ClampedLevel, Divisions, Actions)
-	;   apply_transient_rule_to_level(RuleId, ClampedLevel, Divisions, Actions)
+		apply_persistent_to_level(RuleId, ClampedLevel, Divisions, Actions)
+	;   (ClampedLevel > 0 ->
+			apply_transient(RuleId, Divisions, Actions)
+		;   Actions = []
+		)
 	).
 
-apply_rule_impl(RuleId, none, none, none, Actions) :-
-	apply_rule_impl(RuleId, none, 1, none, Actions).
-
-% Catch-all: unknown rule
-apply_rule_impl(RuleId, _, _, _, _) :-
-	throw(error(unknown_rule(RuleId), context(apply_rule_impl/5, 'Rule does not exist or no matching clause'))).
+apply_rule(RuleId, none, none, none, Actions) :-
+	apply_rule(RuleId, none, 1, none, Actions).
 
 % ============================================================================
 % Persistent rule application
 % ============================================================================
 
-apply_persistent_rule_to_level(RuleId, TargetLevel, Divisions, Actions) :-
+apply_persistent_to_level(RuleId, TargetLevel, Divisions, Actions) :-
 	get_rule_level(RuleId, CurrentLevel),
 	(TargetLevel = CurrentLevel -> Actions = []
 	;   compute_persistent_delta(RuleId, CurrentLevel, TargetLevel, Divisions, Actions),
@@ -254,62 +262,38 @@ compute_delta_actions(RuleId, [Div-Old|OldRest], [Div-New|NewRest], Actions) :-
 		member(N, ToAdd),
 		claim(RuleId, Div, N),
 		do_engage(Div, N),
-		rpc_action(Div, N, 1.0, Action)
+		make_rpc_action(Div, N, 1.0, Action)
 	), AddActions),
 	findall(Action, (
 		member(N, New),
 		\+ member(N, ToAdd),
 		do_engage(Div, N),
-		rpc_action(Div, N, 1.0, Action)
+		make_rpc_action(Div, N, 1.0, Action)
 	), ReassertActions),
 	findall(Action, (
 		member(N, ToRemove),
 		release(RuleId, Div, N),
-		(\+ still_owned_after_release(RuleId, Div, N) ->
-			(do_disengage(Div, N), rpc_action(Div, N, 0.0, Action))
-		;   fail
-		)
+		\+ still_owned_after_release(RuleId, Div, N),
+		do_disengage(Div, N),
+		make_rpc_action(Div, N, 0.0, Action)
 	), RemoveActions),
 	compute_delta_actions(RuleId, OldRest, NewRest, RestActions),
 	append([AddActions, ReassertActions, RemoveActions, RestActions], Actions).
+
+make_rpc_action(Div, N, Value, Action) :-
+	element(Div, N, _, Type),
+	make_rpc_action_for_type(Type, Div, N, Value, Action).
+
+make_rpc_action_for_type(stop, Div, N, Value, set_stop(Div, N, Value)).
+make_rpc_action_for_type(coupler, _, N, Value, set_coupler(N, Value)).
+make_rpc_action_for_type(mono_coupler, _, N, Value, set_mono_coupler(N, Value)).
+make_rpc_action_for_type(tremulant, _, N, Value, set_tremulant(N, Value)).
 
 % ============================================================================
 % Transient rule application
 % ============================================================================
 
-% Transient rules: either predicate-based or selector-based
-apply_transient_rule(RuleId, Divisions, Actions) :-
-	(rule_predicate(RuleId) ->
-		apply_predicate_rule(RuleId, Actions)
-	;
-		apply_selector_based_transient(RuleId, Divisions, Actions)
-	).
-
-% Predicate-based rules: call rule_action/2, execute returned actions
-apply_predicate_rule(RuleId, RPCActions) :-
-	rule_action(RuleId, RawActions),
-	findall(RPCAction, (
-		member(Action, RawActions),
-		execute_rule_action(Action, RPCAction)
-	), RPCActions).
-
-execute_rule_action(engage(Div, N), RPCAction) :-
-	do_engage(Div, N),
-	rpc_action(Div, N, 1.0, RPCAction).
-execute_rule_action(disengage(Div, N), RPCAction) :-
-	do_disengage(Div, N),
-	rpc_action(Div, N, 0.0, RPCAction).
-execute_rule_action(toggle(Div, N), RPCAction) :-
-	(engaged(Div, N) ->
-		do_disengage(Div, N),
-		rpc_action(Div, N, 0.0, RPCAction)
-	;
-		do_engage(Div, N),
-		rpc_action(Div, N, 1.0, RPCAction)
-	).
-
-% Selector-based transient rules: apply all selectors once
-apply_selector_based_transient(RuleId, Divisions, Actions) :-
+apply_transient(RuleId, Divisions, Actions) :-
 	current_preset(Preset),
 	computed_max_level(RuleId, Preset, MaxLevel),
 	findall(Action, (
@@ -320,32 +304,47 @@ apply_selector_based_transient(RuleId, Divisions, Actions) :-
 		apply_element_action(Div, N, SelectorAction, Action)
 	), Actions).
 
-% Legacy level-based entry points now just apply the rule
-apply_transient_rule_to_level(RuleId, TargetLevel, Divisions, Actions) :-
-	(TargetLevel > 0 ->
-		apply_transient_rule(RuleId, Divisions, Actions)
-	;   Actions = []
-	).
-
-apply_transient_rule_delta(RuleId, Delta, Divisions, Actions) :-
-	(Delta > 0 ->
-		apply_transient_rule(RuleId, Divisions, Actions)
-	;   Actions = []
-	).
-
-% Apply the action specified in the selector
 apply_element_action(Div, N, engage, Action) :-
 	do_engage(Div, N),
-	rpc_action(Div, N, 1.0, Action).
+	make_rpc_action(Div, N, 1.0, Action).
 apply_element_action(Div, N, disengage, Action) :-
 	do_disengage(Div, N),
-	rpc_action(Div, N, 0.0, Action).
+	make_rpc_action(Div, N, 0.0, Action).
+
+% ============================================================================
+% Predicate-based rules
+% ============================================================================
+
+apply_predicate_rule(RuleId, RPCActions) :-
+	rule_action(RuleId, ActionSpec),
+	(callable(ActionSpec), \+ is_list(ActionSpec) ->
+		call(ActionSpec, RPCActions)
+	;	findall(RPCAction, (
+			member(Action, ActionSpec),
+			execute_rule_action(Action, RPCAction)
+		), RPCActions)
+	).
+
+execute_rule_action(engage(Div, N), RPCAction) :-
+	do_engage(Div, N),
+	make_rpc_action(Div, N, 1.0, RPCAction).
+execute_rule_action(disengage(Div, N), RPCAction) :-
+	do_disengage(Div, N),
+	make_rpc_action(Div, N, 0.0, RPCAction).
+execute_rule_action(toggle(Div, N), RPCAction) :-
+	(engaged(Div, N) ->
+		do_disengage(Div, N),
+		make_rpc_action(Div, N, 0.0, RPCAction)
+	;
+		do_engage(Div, N),
+		make_rpc_action(Div, N, 1.0, RPCAction)
+	).
 
 % ============================================================================
 % Solo and reassert
 % ============================================================================
 
-solo_rule_impl(RuleId, Level, Divisions, Actions) :-
+solo_impl(RuleId, Level, Divisions, Actions) :-
 	findall(Div-Elements, (
 		member(Div, Divisions),
 		rule_elements_cumulative(RuleId, Level, Div, Elements)
@@ -354,16 +353,53 @@ solo_rule_impl(RuleId, Level, Divisions, Actions) :-
 		member(Div-RuleElements, RulePairs),
 		element(Div, N, _, _),
 		(member(N, RuleElements) ->
-			(do_engage(Div, N), rpc_action(Div, N, 1.0, Action))
-		;   (do_disengage(Div, N), rpc_action(Div, N, 0.0, Action))
+			(do_engage(Div, N), make_rpc_action(Div, N, 1.0, Action))
+		;   (do_disengage(Div, N), make_rpc_action(Div, N, 0.0, Action))
 		)
 	), Actions).
 
-reassert_rule_impl(RuleId, Level, Divisions, Actions) :-
+reassert_impl(RuleId, Level, Divisions, Actions) :-
 	findall(Action, (
 		member(Div, Divisions),
 		rule_elements_cumulative(RuleId, Level, Div, Elements),
 		member(N, Elements),
 		do_engage(Div, N),
-		rpc_action(Div, N, 1.0, Action)
+		make_rpc_action(Div, N, 1.0, Action)
 	), Actions).
+
+% ============================================================================
+% Rules as selectors
+% ============================================================================
+%
+% Allows rule IDs to be used directly in selectors:
+%   resolve_selector(great, my_rule, Els).       % current level
+%   resolve_selector(great, my_rule:2, Els).     % explicit level
+%
+% This enables compound selectors like:
+%   difference(my_rule, family(principal, 8))
+
+:- multifile selectors:resolve_selector/3.
+
+selectors:resolve_selector(Division, RuleId, Elements) :-
+	atom(RuleId),
+	RuleId \= engaged,
+	RuleId \= disengaged,
+	RuleId \= all,
+	RuleId \= stops,
+	rule(RuleId, _),
+	!,
+	get_rule_level(RuleId, Level),
+	(Level > 0 ->
+		rule_elements_cumulative(RuleId, Level, Division, Elements)
+	;	Elements = []
+	).
+
+selectors:resolve_selector(Division, RuleId:Level, Elements) :-
+	atom(RuleId),
+	integer(Level),
+	rule(RuleId, _),
+	!,
+	(Level > 0 ->
+		rule_elements_cumulative(RuleId, Level, Division, Elements)
+	;	Elements = []
+	).

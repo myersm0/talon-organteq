@@ -1,37 +1,56 @@
-% selectors.pl - Selector resolution and dict conversion
+% Selector resolution
 
 :- module(selectors, [
 	resolve_selector/3,
 	dict_to_selector/2,
+	% Preset matching
 	preset_matches/2,
 	uses_for_preset/1,
 	selector_matches_preset/2,
+	% Rule filtering
 	rule_for_preset/2,
 	rules_for_preset/2,
 	computed_max_level/3,
 	has_preset_specific_selectors/2,
+	% Effective selectors (preset-aware)
 	effective_rule_selector/3,
 	effective_rule_selector/4,
 	effective_rule_selector/5
 ]).
 
-:- use_module(state, [
-	element/4, engaged/2, current_preset/1, json_to_atom/2, get_dict/4,
-	rule/2, rule_predicate/1, rule_selector/3, rule_selector/4, rule_selector/5
-]).
-:- use_module(classification, [
-	element_family/3, element_footage/3, base_name/2, alias_of/2, name_footage/2,
-	coupler_source/2, coupler_destination/2, coupler_transposition/2
-]).
 :- use_module(library(apply), [include/3]).
 
+:- use_module(state, [
+	element/4,
+	engaged/2,
+	current_preset/1,
+	json_to_atom/2,
+	rule/2,
+	rule_predicate/1,
+	rule_selector/3,
+	rule_selector/4,
+	rule_selector/5,
+	manuals/1
+]).
+
+:- use_module(classification, [
+	element_family/3,
+	element_footage/3,
+	base_name/2,
+	alias_of/2,
+	name_footage/2,
+	coupler_source/2,
+	coupler_destination/2,
+	coupler_transposition/2
+]).
+
 :- discontiguous resolve_selector/3.
+:- multifile resolve_selector/3.
 
 % ============================================================================
 % Preset pattern matching
 % ============================================================================
 
-% Match preset against a pattern (supports * as glob wildcard)
 preset_matches(Preset, Pattern) :-
 	atom(Pattern),
 	atom_string(Pattern, PatternStr),
@@ -57,8 +76,7 @@ escape_and_convert([H|T], ['\\'|[H|T2]]) :-
 	member(H, ['.', '^', '$', '+', '(', ')', '[', ']', '{', '}', '|', '\\']),
 	escape_and_convert(T, T2).
 escape_and_convert([H|T], [H|T2]) :-
-	H \= '*',
-	H \= '?',
+	H \= '*', H \= '?',
 	\+ member(H, ['.', '^', '$', '+', '(', ')', '[', ']', '{', '}', '|', '\\']),
 	escape_and_convert(T, T2).
 
@@ -66,7 +84,6 @@ escape_and_convert([H|T], [H|T2]) :-
 % Selector preset checking
 % ============================================================================
 
-% Check if a selector uses for_preset wrapper
 uses_for_preset(for_preset(_, _)).
 uses_for_preset(Sel) :-
 	compound(Sel),
@@ -75,7 +92,6 @@ uses_for_preset(Sel) :-
 	member(Arg, Args),
 	uses_for_preset(Arg).
 
-% Check if selector matches a preset (either universal or matching for_preset)
 selector_matches_preset(for_preset(Pattern, _), Preset) :-
 	!, preset_matches(Preset, Pattern).
 selector_matches_preset(Sel, _) :-
@@ -85,12 +101,10 @@ selector_matches_preset(Sel, _) :-
 % Rule filtering by preset
 % ============================================================================
 
-% Predicate-based rules are universal (available for all presets)
 rule_for_preset(RuleId, _) :-
 	rule(RuleId, _),
 	rule_predicate(RuleId).
 
-% Selector-based rules: check if any selector matches preset or is universal
 rule_for_preset(RuleId, Preset) :-
 	rule(RuleId, _),
 	\+ rule_predicate(RuleId),
@@ -103,10 +117,6 @@ rule_for_preset(RuleId, Preset) :-
 rules_for_preset(Preset, Rules) :-
 	findall(RuleId, rule_for_preset(RuleId, Preset), RulesUnsorted),
 	sort(RulesUnsorted, Rules).
-
-% Compute max_level from selectors that match the current preset.
-% If preset-specific selectors exist, use only those (they take priority).
-% Otherwise fall back to universal selectors.
 
 computed_max_level(RuleId, Preset, MaxLevel) :-
 	findall(Level, (
@@ -133,11 +143,9 @@ computed_max_level(RuleId, _, MaxLevel) :-
 	!,
 	max_list(UniversalLevels, MaxLevel).
 
-% Fallback to explicit max_level/2 (for predicate-based rules)
 computed_max_level(RuleId, _, MaxLevel) :-
-	max_level(RuleId, MaxLevel).
+	state:max_level(RuleId, MaxLevel).
 
-% Check if a rule has any preset-specific selectors matching the current preset
 has_preset_specific_selectors(RuleId, Preset) :-
 	once((
 		(   rule_selector(RuleId, _, Sel)
@@ -148,10 +156,10 @@ has_preset_specific_selectors(RuleId, Preset) :-
 		selector_matches_preset(Sel, Preset)
 	)).
 
-% Effective rule selectors: if preset-specific exist, use only those.
-% Otherwise fall back to universal selectors.
+% ============================================================================
+% Effective rule selectors (preset-aware)
+% ============================================================================
 
-% Arity 3: rule_selector(RuleId, Level, Selector)
 effective_rule_selector(RuleId, Level, Sel) :-
 	current_preset(Preset),
 	has_preset_specific_selectors(RuleId, Preset),
@@ -164,7 +172,6 @@ effective_rule_selector(RuleId, Level, Sel) :-
 	rule_selector(RuleId, Level, Sel),
 	\+ uses_for_preset(Sel).
 
-% Arity 4: rule_selector(RuleId, Level, Division, Selector)
 effective_rule_selector(RuleId, Level, Div, Sel) :-
 	current_preset(Preset),
 	has_preset_specific_selectors(RuleId, Preset),
@@ -177,7 +184,6 @@ effective_rule_selector(RuleId, Level, Div, Sel) :-
 	rule_selector(RuleId, Level, Div, Sel),
 	\+ uses_for_preset(Sel).
 
-% Arity 5: rule_selector(RuleId, Level, Division, Selector, Action)
 effective_rule_selector(RuleId, Level, Div, Sel, Action) :-
 	current_preset(Preset),
 	has_preset_specific_selectors(RuleId, Preset),
@@ -194,7 +200,6 @@ effective_rule_selector(RuleId, Level, Div, Sel, Action) :-
 % Selector resolution
 % ============================================================================
 
-% for_preset wrapper - resolve inner selector only if preset matches
 resolve_selector(Division, for_preset(Pattern, InnerSelector), Elements) :-
 	current_preset(Preset),
 	(preset_matches(Preset, Pattern) ->
@@ -335,7 +340,7 @@ apply_limit(Elements, Limit, random, Limited) :-
 	apply_limit(Shuffled, Limit, first, Limited), !.
 
 % ============================================================================
-% Dict to selector conversion
+% Dict to selector conversion (for JSON API)
 % ============================================================================
 
 dict_to_selector(Dict, Selector) :-
@@ -354,15 +359,18 @@ dict_to_selector(String, Atom) :-
 dict_to_selector(List, numbers(List)) :-
 	is_list(List), !.
 
+get_dict_default(Key, Dict, Value, Default) :-
+	(get_dict(Key, Dict, Value) -> true ; Value = Default).
+
 dict_to_selector_by_type(numbers, Dict, numbers(Values)) :-
 	get_dict(values, Dict, Values).
 
 dict_to_selector_by_type(family, Dict, Selector) :-
 	get_dict(values, Dict, FamilyRaw),
 	json_to_atom(FamilyRaw, Family),
-	get_dict(footage, Dict, Footage, any),
-	get_dict(limit, Dict, Limit, none),
-	get_dict(limit_method, Dict, MethodRaw, first),
+	get_dict_default(footage, Dict, Footage, any),
+	get_dict_default(limit, Dict, Limit, none),
+	get_dict_default(limit_method, Dict, MethodRaw, first),
 	json_to_atom(MethodRaw, Method),
 	(Limit = none ->
 		(Footage = any -> Selector = family(Family) ; Selector = family(Family, Footage))
@@ -396,7 +404,7 @@ dict_to_selector_by_type(coupler_to, Dict, coupler_to(DestAtom)) :-
 dict_to_selector_by_type(coupler, Dict, Selector) :-
 	get_dict(source, Dict, Source),
 	get_dict(destination, Dict, Dest),
-	get_dict(transposition, Dict, Trans, none),
+	get_dict_default(transposition, Dict, Trans, none),
 	json_to_atom(Source, SourceAtom),
 	json_to_atom(Dest, DestAtom),
 	(Trans = none -> Selector = coupler(SourceAtom, DestAtom)

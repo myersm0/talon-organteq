@@ -1,10 +1,8 @@
 # Advanced usage guide
-This guide covers rule authoring, the selector system, preset-specific behavior, and customization.
-
 ## Table of contents
 1. [Understanding rules](#understanding-rules)
 2. [Writing rules](#writing-rules)
-3. [Selector reference](#selector-reference)
+3. [Selectors](#selectors)
 4. [Preset-specific rules](#preset-specific-rules)
 5. [Predicate-based rules](#predicate-based-rules)
 6. [Ownership system](#ownership-system)
@@ -14,18 +12,18 @@ This guide covers rule authoring, the selector system, preset-specific behavior,
 ---
 
 ## Understanding rules
-Rules are reusable, multi-level registration presets. They come in two types:
+Rules are reusable registration presets. They come in two types:
 
 ### Transient rules
-One-time, memory-less transformations. Maybe, for example, you want a rule `brighten` to add mixtures or mutations. Each application of such a rule is independent.
+One-time, memory-less transformations. Maybe, for example, you want a `brighten` rule to add mixtures or mutations. Each application of such a rule is independent.
 
 ### Persistent rules
-Transformations that persist across applications, in a cumulative manner. Useful for defining schemes that build incrementally, like crescendo effects.
+Multi-level transformations that persist across applications in a cumulative manner. Useful for defining schemes that build incrementally, like crescendo effects.
 
 ---
 
 ## Writing rules
-Rules are defined in Prolog files. You can keep your custom rule files in a directory and load them upon starting the Prolog server.
+Rules are defined in Prolog files. Keep your custom rule files in a directory and load them when starting the Prolog server.
 
 ### Basic structure
 
@@ -37,20 +35,20 @@ Rules are defined in Prolog files. You can keep your custom rule files in a dire
 :- multifile state:rule_selector/4.
 
 % Define a persistent rule
-state:rule(my_rule, persistent).
-state:max_level(my_rule, 3).
+state:rule('my rule', persistent).
+state:max_level('my rule', 3).
 
 % Level 1: foundation
-state:rule_selector(my_rule, 1, great, numbers([1, 2, 3])).
-state:rule_selector(my_rule, 1, pedal, numbers([1, 2])).
+state:rule_selector('my rule', 1, great, numbers([1, 2, 3])).
+state:rule_selector('my rule', 1, pedal, numbers([1, 2])).
 
 % Level 2: add color
-state:rule_selector(my_rule, 2, swell, numbers([1, 2, 3])).
-state:rule_selector(my_rule, 2, great, family(flute, 4)).
+state:rule_selector('my rule', 2, swell, numbers([1, 2, 3])).
+state:rule_selector('my rule', 2, great, family(flute, 4)).
 
 % Level 3: full
-state:rule_selector(my_rule, 3, great, family(reed)).
-state:rule_selector(my_rule, 3, swell, family(reed)).
+state:rule_selector('my rule', 3, great, family(reed)).
+state:rule_selector('my rule', 3, swell, family(reed)).
 ```
 
 ### rule_selector arities
@@ -59,10 +57,10 @@ state:rule_selector(my_rule, 3, swell, family(reed)).
 % 3-arg: applies to all divisions
 rule_selector(RuleId, Level, Selector).
 
-% 4-arg: applies to specific division only  
+% 4-arg: applies to specific division only
 rule_selector(RuleId, Level, Division, Selector).
 
-% 5-arg: with preset filter (see Preset-Specific Rules)
+% 5-arg: with preset filter (see preset-specific rules)
 rule_selector(RuleId, Level, Division, Selector, PresetPattern).
 ```
 
@@ -70,18 +68,24 @@ rule_selector(RuleId, Level, Division, Selector, PresetPattern).
 
 From the Prolog server startup:
 ```bash
-swipl -g "consult('main.pl'), load_rules_from_dir('/path/to/rules', '*.pl'), server(5000)."
+swipl -g "consult('main.pl'), load_rules('/path/to/rules'), server(5000)."
 ```
 
-From Python:
+Or with a fileglob pattern to select only specific files from within the directory:
+```bash
+swipl -g "consult('main.pl'), load_rules('/path/to/rules', '*.pl'), server(5000)."
+```
+
+Or from Python:
 ```python
-bridge.load_rules("/path/to/my_rules.pl")
+bridge.load("/path/to/'my rule's.pl")
 ```
 
 ---
 
-## Selector reference
-Selectors are the building blocks for specifying stop sets.
+## Selectors
+Selectors specify which stops to target. They can be used in commands like engage, disengage, toggle, and solo, and in rule definitions.
+
 
 ### Atomic selectors
 
@@ -95,7 +99,7 @@ Selectors are the building blocks for specifying stop sets.
 | `family(reed)` | Stops of a tonal family |
 | `family(reed, 8)` | Family + footage filter |
 | `family(reed, any, 2, first)` | Family + limit (first 2) |
-| `family(reed, any, 1, random)` | Family + random selection |
+| `family(reed, any, 1, random)` | Family + 1 random selection |
 | `names(['Trompette 8\\''])` | Stops by exact name |
 | `type(stop)` | Elements by type |
 
@@ -134,15 +138,43 @@ intersection([family(reed), engaged])
 difference(engaged, family(reed))
 ```
 
+### Preset-specific selector
+Wrap any selector to apply only when the current preset matches a pattern:
+```prolog
+for_preset('Baroque Cathedral*', numbers([1, 2, 3])).
+for_preset('Neo-Classical Church*', family(reed)).
+```
+
+Patterns support `*` wildcards. If the preset doesn't match, the selector resolves to an empty list.
+
 ### Expression selector
 For arbitrary Prolog predicates:
-
 ```prolog
-% Stops where number > 5
-expression(my_filter)
+expression(Goal)
+```
 
-% Define the filter (receives Division, Number)
-my_filter(_, N) :- N > 5.
+The goal receives Division and Number as arguments:
+```prolog
+% Define a filter predicate to pick stops numbered above 5
+high_number(_, N) :- N > 5.
+
+% Use it
+engage(great, expression(high_number))
+```
+
+### Examples
+```prolog
+% Engage all reeds and mixtures
+engage(great, union([family(reed), family(mixture)]))
+
+% Disengage only the currently engaged reeds
+disengage(great, intersection([family(reed), engaged]))
+
+% Solo everything currently engaged except 16' stops
+solo(great, difference(engaged, family(principal, 16)))
+
+% Engage first reed on each manual (in a rule)
+state:rule_selector(add_reed, 1, Division, family(reed, any, 1, first)).
 ```
 
 ---
@@ -155,20 +187,24 @@ Wrap any selector in `for_preset(Pattern, Selector)`:
 
 ```prolog
 % Different stop numbers per preset family
-state:rule_selector(my_rule, 1, great, for_preset('Baroque Cathedral I', numbers([1, 2, 3]))).
-state:rule_selector(my_rule, 1, great, for_preset('Romantic Abbey', numbers([2, 4, 6]))).
+state:rule_selector('my rule', 1, great, for_preset('Baroque Cathedral I', numbers([1, 2, 3]))).
+state:rule_selector('my rule', 1, great, for_preset('Romantic Abbey', numbers([2, 4, 6]))).
 
 % Universal fallback (no for_preset wrapper)
-state:rule_selector(my_rule, 1, great, family(principal, 8)).
+state:rule_selector('my rule', 1, great, family(principal, 8)).
 ```
 
 When applying a rule, selectors are tried in definition order. The first matching selector for the current preset wins. Always put preset-specific selectors before universal fallbacks.
 
-### Checking available rules
-```python
-# List rules available for a specific preset
-rules = bridge.list_rules(preset="Baroque Cathedral")
+### Pattern matching
+Patterns support `*` wildcards:
+```prolog
+for_preset('Baroque*', numbers([1, 2, 3]))     % matches any Baroque preset
+for_preset('*Cathedral*', family(reed))        % matches presets containing Cathedral
 ```
+
+### Example: preset-specific crescendo
+See `examples/crescendi.pl` for a complete example of crescendos customized per preset.
 
 ---
 
@@ -247,35 +283,28 @@ Persistent rules track which stops they "own" at each level.
 ### Example
 ```python
 # Both rules engage stop 1
-bridge.apply_rule("my persistent rule #1", level=1)   # owns great [1, 2, 3]
-bridge.apply_rule("my persistent rule #2", level=1)   # owns great [1, 2]
+bridge.run("level('rule A', 1)")   # owns great [1, 2, 3]
+bridge.run("level('rule B', 1)")   # owns great [1, 2]
 
-bridge.apply_rule("my persistent rule #1", action="mute")
-# great [1, 2] still engaged
+bridge.run("mute('rule A')")
+# great [1, 2] still engaged (owned by rule B)
 
-bridge.apply_rule("my persistent rule #2", action="mute")
+bridge.run("mute('rule B')")
 # great [] - all off
 ```
 
 ### Why ownership matters
 Without ownership tracking, overlapping rules would fight each other. In the example above, if both persistent rules want stop 1 engaged, muting one of the rules would incorrectly turn off stop 1 even though the other rule still needs it.
 
-There is nothing to stop you from manually disengaging a stop, however. Similiarly, things like transient rules or engaging/disengaging stops by number or family -- operations which are not involved in the ownership-tracking system -- are not subject to such constraints. At any time, you may `reassert` a rule in order to re-engage any of its owned stops that may have been disengaged by such an operation.
+There is nothing to stop you from manually disengaging a stop. Similarly, things like transient rules and direct engage/disengage commands are not subject to ownership constraints. At any time, you may `reassert` a rule to re-engage any of its owned stops that may have been disengaged by such an operation.
 
 ---
 
 ## Working with auxiliaries
-Auxiliaries are non-stop elements: couplers, mono couplers, and tremulants.
+Auxiliaries are non-stop elements: couplers and tremulants.
 
 ### Including auxiliaries in rules
-By default, `apply_rule` only affects manuals. To include auxiliaries:
-
-```python
-# The rule itself must define auxiliary selectors
-# (see full_organ example in examples/custom_rules.pl)
-```
-
-In the rule definition:
+Rules can include coupler and tremulant selectors:
 
 ```prolog
 state:rule(full_organ, persistent).
@@ -291,20 +320,22 @@ state:rule_selector(full_organ, 4, tremulant, numbers([1])).
 
 ### Direct control
 ```python
-# Engage coupler 1
-bridge.engage("coupler", [1])
+# Engage coupler by index
+bridge.run("couple_index(1)")
 
-# Engage swell to great coupler by source/dest
-bridge.engage("coupler", {"by": "coupler", "source": "swell", "destination": "great"})
+# Engage coupler by source/destination
+bridge.run("couple(swell, great)")
+bridge.run("couple(swell, great, sub)")   # sub-octave
 
-# Engage tremulant
-bridge.engage("tremulant", [1])
+# Tremulants
+bridge.run("tremulant_on(1)")
+bridge.run("tremulant_toggle(1)")
 ```
 
 ---
 
 ## Stop classification
-Stops are classified by tonal family based on their names. The classification module (`classification.pl`) uses pattern matching.
+Stops are classified by tonal family based on their names. The classification module uses pattern matching.
 
 ### Families
 | Family | Example stops |
@@ -323,7 +354,7 @@ Footage is extracted from stop names:
 - `"Mixtura IV"` → footage unknown
 
 ### Adding classifications
-If a stop isn't being classified correctly, add it to `classification.pl`:
+If a stop isn't being classified correctly, add it to `config/families.pl`:
 
 ```prolog
 family_of('Custom Stop Name', reed).
@@ -333,47 +364,51 @@ family_of('Custom Stop Name', reed).
 
 ## Tips
 
-### Testing rules
-Use the Prolog server interactively:
+### Testing rules interactively
+Use the Prolog REPL:
 
 ```bash
-swipl -g "consult('main.pl'), load_rules_from_dir('../examples', 'custom_rules.pl')."
+cd prolog
+swipl -g "consult('main.pl'), load_rules('../examples')."
 ```
 
 Then query:
 
 ```prolog
 ?- state:rule(X, Y).
-?- state:rule_selector(my_rule, 1, Div, Sel).
+?- state:rule_selector('my rule', 1, Div, Sel).
+?- selectors:resolve_selector(great, family(reed), Stops).
 ```
 
 ### Debugging
-Enable debug output in your rule predicates:
+Enable logging:
 
 ```prolog
-state:rule_action(my_rule, Actions) :-
+?- set_log_level(2).
+```
+
+Or add debug output in your rule predicates:
+
+```prolog
+state:rule_action('my rule', Actions) :-
     format("Computing actions...~n"),
     % ... computation ...
     format("Actions: ~w~n", [Actions]).
 ```
 
-### Performance
-- Keep selector resolution fast
-- Avoid expensive predicates in `expression()` selectors
-- Use specific selectors rather than filtering large sets
-
 ### Organizing your custom rules
-Keep your rules in a separate directory from the main project, for example:
+Keep your rules separate from the main project:
 
 ```
 ~/.config/talon-organteq/rules/
-├── my_bach_rules.pl
-├── my_mendelssohn_rules.pl
-└── my_experimental_rules.pl
+├── my_crescendos.pl
+├── my_combinations.pl
+└── my_experimental.pl
 ```
 
 Load at startup:
 
 ```bash
-swipl -g "consult('main.pl'), load_rules_from_dir('~/.config/talon-organteq/rules', '*.pl'), server(5000)."
+swipl -g "consult('main.pl'), load_rules('~/.config/talon-organteq/rules'), server(5000)."
 ```
+

@@ -40,6 +40,7 @@ ctx.lists["self.organteq_stop_number"] = {
 mod.list("organteq_tonal_family", desc="A list of standard organ tonal families (plural forms as spoken)")
 ctx.lists["self.organteq_tonal_family"] = {
 	"principals": "principal",
+	"principles": "principal",
 	"flutes": "flute",
 	"strings": "string",
 	"reeds": "reed",

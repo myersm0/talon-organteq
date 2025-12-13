@@ -38,9 +38,11 @@ cd prolog
 swipl -g "consult('main.pl'), server(5000)."
 ```
 
+The server will automatically sync with Organteq and begin polling for preset changes every 5 seconds.
+
 From here, you may control Organteq either from Python or via Talon voice. See [talon/README.md](talon/README.md) for the voice interface.
 
-Here's an example of basic usage for the Python API:
+### Python usage
 ```python
 from client import Bridge
 
@@ -48,25 +50,41 @@ bridge = Bridge()
 bridge.sync()
 
 # basic stop control
-bridge.engage("great", [1, 2, 3])
-bridge.disengage("great", [2])
-bridge.toggle("swell", [1, 4])
-bridge.solo("great", [1, 6])
-bridge.clear("pedal")
+bridge.run("engage(great, numbers([1, 2, 3]))")
+bridge.run("disengage(great, numbers([2]))")
+bridge.run("toggle(swell, numbers([1, 4]))")
+bridge.run("solo(great, numbers([1, 6]))")
+bridge.run("clear(pedal)")
 
 # control by tonal family
-bridge.engage_family("great", "reed")
-bridge.engage_family("great", "principal", footage=8)
-bridge.disengage_family("swell", "mixture")
+bridge.run("engage(great, family(reed))")
+bridge.run("engage(great, family(principal, 8))")
+bridge.run("disengage(swell, family(mixture))")
 
 # undo/redo
-bridge.undo()
-bridge.redo()
+bridge.run("undo")
+bridge.run("redo")
+```
+
+### Interactive Prolog
+You can also work directly in the Prolog REPL for testing:
+```bash
+cd prolog
+swipl -g "consult('main.pl')."
+```
+
+Then:
+```prolog
+?- sync.
+?- engage(great, numbers([1, 2, 3])).
+?- engage(swell, family(reed)).
+?- up('crescendo great').
+?- undo.
 ```
 
 ## Documentation
-- [Python API reference](docs/api-reference.md) - Complete Bridge class documentation
-- [Advanced usage guide](docs/advanced-usage.md) - Selectors, rules, and customization
+- [API reference](docs/api-reference.md) - Commands and selectors
+- [Advanced usage guide](docs/advanced-usage.md) - Rules, preset-specific behavior, and customization
 - [Voice commands](talon/README.md) - Talon voice interface
 
 ## Tips for setting up voice recognition

@@ -1,7 +1,4 @@
-% helpers.pl - Helper predicates for writing custom rules
-%
-% This module provides convenient predicates for querying and manipulating
-% organ state when writing predicate-based rules.
+% Helper predicates for writing custom rules
 
 :- module(helpers, [
 	% Element queries
@@ -27,7 +24,7 @@
 	last_engaged_in_family/3
 ]).
 
-:- use_module(state, [element/4, engaged/2, manual/1]).
+:- use_module(state, [element/4, engaged/2]).
 :- use_module(classification, [element_family/3, element_footage/3]).
 
 % ============================================================================
@@ -89,7 +86,7 @@ take_last(List, N, Result) :-
 		Skip is Len - N,
 		length(Prefix, Skip),
 		append(Prefix, Result, List)
-	;	Result = List
+	;   Result = List
 	).
 
 % ============================================================================

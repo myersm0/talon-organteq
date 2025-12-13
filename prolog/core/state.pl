@@ -1,18 +1,13 @@
-% state.pl - Dynamic state and core state manipulation
-% All dynamic predicates and basic state operations
+% Dynamic state and basic state operations
 
 :- module(state, [
-	% Dynamic predicates
+	% Dynamic state predicates
 	element/4,
 	engaged/2,
 	current_preset/1,
 	rule_level/2,
 	owns/3,
-	snapshot/2,
-	snapshot_counter/1,
-	current_snapshot/1,
-	coupler_mapping/6,
-	% Rule predicates (multifile for user rules)
+	% Rule definition predicates (multifile, for user rules)
 	rule/2,
 	max_level/2,
 	antonym/2,
@@ -21,9 +16,11 @@
 	rule_selector/3,
 	rule_selector/4,
 	rule_selector/5,
-	% Divisions
-	manual/1,
-	auxiliary/1,
+	% History
+	snapshot/2,
+	snapshot_counter/1,
+	current_snapshot/1,
+	% Division queries
 	division/1,
 	manuals/1,
 	auxiliaries/1,
@@ -37,24 +34,16 @@
 	still_owned_after_release/3,
 	get_rule_level/2,
 	set_rule_level/2,
-	% History
+	% History operations
 	reset_history/0,
 	save_snapshot/1,
 	restore_snapshot/2,
-	get_current_state/1,
-	% RPC actions
-	rpc_action/4,
-	% Helpers
-	json_to_atom/2,
-	get_dict/4
+	get_snapshot_state/1,
+	% Utilities
+	json_to_atom/2
 ]).
 
-% Helper: get_dict with default value
-get_dict(Key, Dict, Value, Default) :-
-	(get_dict(Key, Dict, Value) -> true ; Value = Default).
-
-json_to_atom(Value, Atom) :-
-	(atom(Value) -> Atom = Value ; atom_string(Atom, Value)).
+:- use_module(config(divisions), [manual/1, auxiliary/1]).
 
 % ============================================================================
 % Dynamic predicates
@@ -68,10 +57,10 @@ json_to_atom(Value, Atom) :-
 :- dynamic max_level/2.         % max_level(RuleId, MaxLevel)
 :- dynamic antonym/2.           % antonym(RuleId, AntonymId)
 :- dynamic rule_predicate/1.    % rule_predicate(RuleId) - marks predicate-based rules
-:- dynamic rule_action/2.       % rule_action(RuleId, Actions) - predicate-based rule implementation
-:- dynamic rule_selector/3.     % rule_selector(RuleId, Level, Selector) - all divisions, engage
-:- dynamic rule_selector/4.     % rule_selector(RuleId, Level, Division, Selector) - specific division, engage
-:- dynamic rule_selector/5.     % rule_selector(RuleId, Level, Division, Selector, Action) - full form
+:- dynamic rule_action/2.       % rule_action(RuleId, Actions)
+:- dynamic rule_selector/3.     % rule_selector(RuleId, Level, Selector)
+:- dynamic rule_selector/4.     % rule_selector(RuleId, Level, Division, Selector)
+:- dynamic rule_selector/5.     % rule_selector(RuleId, Level, Division, Selector, Action)
 
 :- multifile rule/2.
 :- multifile max_level/2.
@@ -82,6 +71,13 @@ json_to_atom(Value, Atom) :-
 :- multifile rule_selector/4.
 :- multifile rule_selector/5.
 
+:- discontiguous rule/2.
+:- discontiguous max_level/2.
+:- discontiguous antonym/2.
+:- discontiguous rule_selector/3.
+:- discontiguous rule_selector/4.
+:- discontiguous rule_selector/5.
+
 :- dynamic rule_level/2.        % rule_level(RuleId, CurrentLevel)
 :- dynamic owns/3.              % owns(RuleId, Division, Number)
 
@@ -89,24 +85,19 @@ json_to_atom(Value, Atom) :-
 :- dynamic snapshot_counter/1.  % snapshot_counter(NextId)
 :- dynamic current_snapshot/1.  % current_snapshot(Id)
 
-:- dynamic coupler_mapping/6.   % coupler_mapping(Preset, Index, Source, Dest, Trans, Dir)
-:- multifile coupler_mapping/6.
-
 snapshot_counter(0).
 current_snapshot(-1).
 
 % ============================================================================
-% Divisions
+% Utilities
 % ============================================================================
 
-manual(pedal).
-manual(choir).
-manual(great).
-manual(swell).
+json_to_atom(Value, Atom) :-
+	(atom(Value) -> Atom = Value ; atom_string(Atom, Value)).
 
-auxiliary(coupler).
-auxiliary(mono_coupler).
-auxiliary(tremulant).
+% ============================================================================
+% Division queries
+% ============================================================================
 
 division(D) :- manual(D).
 division(D) :- auxiliary(D).
@@ -126,7 +117,7 @@ do_disengage(Division, Number) :-
 	retractall(engaged(Division, Number)).
 
 % ============================================================================
-% Ownership tracking
+% Ownership tracking (for persistent rules)
 % ============================================================================
 
 is_owned(Division, Number) :-
@@ -150,7 +141,7 @@ set_rule_level(RuleId, Level) :-
 	(Level > 0 -> assertz(rule_level(RuleId, Level)) ; true).
 
 % ============================================================================
-% History / Snapshots
+% History
 % ============================================================================
 
 reset_history :-
@@ -160,8 +151,14 @@ reset_history :-
 	assertz(snapshot_counter(0)),
 	assertz(current_snapshot(-1)).
 
+get_snapshot_state(State) :-
+	findall(engaged(D, N), engaged(D, N), EngagedList),
+	findall(rule_level(R, L), rule_level(R, L), RuleLevels),
+	findall(owns(R, D, N), owns(R, D, N), Ownership),
+	State = state(EngagedList, RuleLevels, Ownership).
+
 save_snapshot(Label) :-
-	get_current_state(State),
+	get_snapshot_state(State),
 	retract(snapshot_counter(Id)),
 	NextId is Id + 1,
 	assertz(snapshot_counter(NextId)),
@@ -170,48 +167,15 @@ save_snapshot(Label) :-
 	assertz(snapshot(Id, snapshot_data(Label, State))),
 	assertz(current_snapshot(Id)).
 
-restore_snapshot(Id, Actions) :-
+restore_snapshot(Id, RestoredState) :-
 	snapshot(Id, snapshot_data(_, State)),
-	restore_state(State, Actions),
-	retract(current_snapshot(_)),
-	assertz(current_snapshot(Id)).
-
-get_current_state(State) :-
-	findall(engaged(D, N), engaged(D, N), EngagedList),
-	findall(rule_level(R, L), rule_level(R, L), RuleLevels),
-	findall(owns(R, D, N), owns(R, D, N), Ownership),
-	State = state(EngagedList, RuleLevels, Ownership).
-
-restore_state(state(EngagedList, RuleLevels, Ownership), Actions) :-
-	findall(engaged(D, N), engaged(D, N), CurrentEngaged),
-	findall(Action, (
-		member(engaged(D, N), EngagedList),
-		\+ member(engaged(D, N), CurrentEngaged),
-		rpc_action(D, N, 1.0, Action)
-	), EngageActions),
-	findall(Action, (
-		member(engaged(D, N), CurrentEngaged),
-		\+ member(engaged(D, N), EngagedList),
-		rpc_action(D, N, 0.0, Action)
-	), DisengageActions),
-	append(EngageActions, DisengageActions, Actions),
+	State = state(EngagedList, RuleLevels, Ownership),
 	retractall(engaged(_, _)),
 	forall(member(E, EngagedList), assertz(E)),
 	retractall(rule_level(_, _)),
 	forall(member(R, RuleLevels), assertz(R)),
 	retractall(owns(_, _, _)),
-	forall(member(O, Ownership), assertz(O)).
-
-% RPC action generation (needed by restore_state)
-rpc_action(Division, Number, Value, Action) :-
-	element(Division, Number, _, Type),
-	rpc_action_for_type(Type, Division, Number, Value, Action).
-rpc_action(Division, Number, _, _) :-
-	\+ element(Division, Number, _, _),
-	format(user_error, "Warning: rpc_action called for non-existent element ~w/~w~n", [Division, Number]),
-	fail.
-
-rpc_action_for_type(stop, Division, Number, Value, set_stop(Division, Number, Value)).
-rpc_action_for_type(coupler, _, Number, Value, set_coupler(Number, Value)).
-rpc_action_for_type(mono_coupler, _, Number, Value, set_mono_coupler(Number, Value)).
-rpc_action_for_type(tremulant, _, Number, Value, set_tremulant(Number, Value)).
+	forall(member(O, Ownership), assertz(O)),
+	retract(current_snapshot(_)),
+	assertz(current_snapshot(Id)),
+	RestoredState = State.
