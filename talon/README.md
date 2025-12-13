@@ -1,82 +1,100 @@
-# Voice mappings for talon-organteq
+# Voice commands for talon-organteq
 
-## Usage
-First you will have to launch Organteq with JSON-RPC server enabled. On a Mac this can be done from the command line like this:
-```
+## Setup
+1. Launch Organteq with JSON-RPC server enabled. On a Mac this can be done from the command line like this:
+```bash
 /Applications/Organteq\ 2/Organteq\ 2.app/Contents/MacOS/Organteq\ 2 --serve
 ```
 
-### Stop control
+2. Start the Prolog server:
+```bash
+cd prolog
+swipl -g "consult('main.pl'), server(5000)."
+```
+
+---
+
+## Stop control
 The general syntax for controlling stops follows the pattern:
 ```
 [action] [manual] <stop-identifier(s)>
 ```
 
 Where:
-- **action** (optional): The operation to perform. Can be `toggle` (default if omitted), `push`/`disengage`, `pull`/`engage`, or `solo`
-- **manual** (optional): The target manual (`pedal`, `choir`, `great`, or `swell`). Can be omitted if you've previously set a manual context with `use [manual]`
-- **stop-identifiers** (required): Specify which stops to control. Can be either:
-  - Stop numbers (e.g., `one three five`)
-  - A tonal family (e.g., `reeds`)
-  - A footage combined with a tonal family (e.g., `8-foot reeds`)
-  - The word `memory` to reference a bank of manual-specific remembered stops
+- **action** (optional): `toggle` (default), `push`/`disengage`, `pull`/`engage`, or `solo`
+- **manual** (optional): `pedal`, `choir`, `great`, or `swell`. Can be omitted if you've set a manual context with `use [manual]`
+- **stop-identifiers**: Stop numbers, tonal family, or family with footage
 
-#### Stop control by number
+### By number
 ```
 great one three twelve       # toggle stops 1, 3, and 12 on the Great
 swell two                    # toggle stop 2 on the Swell
 pedal four seven             # toggle Pedal stops 4 and 7
+
+pull great one three twelve  # engage stops 1, 3, and 12 on the Great
+push great two               # disengage stop 2 on the Great
+solo great one six           # only stops 1 and 6 engaged on Great
 ```
 
-Engage stops (pull them out):
+### By tonal family
 ```
-pull great one three twelve       # engage stops 1, 3, and 12 on the Great
+pull great reeds             # engage all reeds on Great
+push swell mixtures          # disengage all mixtures on Swell
+solo great principals        # only principals engaged on Great
+
+pull great eight foot reeds  # engage all 8' reeds on Great
+push swell four foot flutes  # disengage all 4' flutes on Swell
 ```
 
-Disengage stops (push them in):
-```
-push great one three twelve       # disengage stops 1, 3, and 12 on the Great
-```
+Available families: `principals`, `flutes`, `strings`, `reeds`, `mutations`, `mixtures`
 
-Solo stops (engage selected stops, clear all others on that manual):
-```
-solo great one three twelve       # solo stops 1, 3, and 12 on Great
-```
+Available footages: `thirty two foot`, `sixteen foot`, `eight foot`, `four foot`, `two foot`, `one foot`
 
+### Manual context
 Set a current manual to avoid repeating the manual name:
 ```
 use great                    # set Great as current manual
 one three twelve             # toggle stops 1, 3, 12 on Great
 pull two four                # engage stops 2, 4 on Great
 push five                    # disengage stop 5 on Great
-solo one six                 # engage only stops 1 and 6 on Great
+reeds                        # toggle reeds on Great
 ```
 
-Clearing all stops:
+---
+
+## Clearing stops
 ```
-cancel great                  # turn off all stops on the Great
-cancel swell                  # turn off all stops on the Swell
-cancel                        # turn off all stops on current manual
-general cancel                # turn off all stops on all keyboards
+cancel great                 # turn off all stops on Great
+cancel swell                 # turn off all stops on Swell
+cancel                       # turn off all stops on current manual
+general cancel               # turn off all stops on all manuals
 ```
 
-#### Stop control by tonal family
-You can control groups of stops by their tonal family (principals, flutes, strings, reeds, mutations, mixtures) and optionally filter by footage:
+---
 
+## Couplers
 ```
-use great                    # set context to Great manual
-toggle reeds                 # toggle all reed stops on Great
-pull 4-foot reeds            # engage all 4-foot reed stops
-pull 8-foot principals       # engage all 8-foot principal stops
-push flutes                  # disengage all flute stops
-solo 8-foot reeds            # engage only 8-foot reeds, clear all other stops on Great
-```
+couple one                   # engage coupler 1
+decouple one                 # disengage coupler 1
 
-You can also specify the manual explicitly:
-```
-pull great 4-foot reeds      # engage all 4-foot reeds on Great
-solo swell principals        # engage only principals on Swell, clear all other stops
+couple swell to great        # engage swell to great coupler
+decouple swell from great    # disengage swell to great coupler
 ```
 
-Available families: `principals`, `flutes`, `strings`, `reeds`, `mutations`, `mixtures`.
+---
 
+## History
+```
+undo                         # undo last operation
+redo                         # redo last undone operation
+```
+
+---
+
+## Sync
+```
+sync                         # sync state from Organteq
+sync registration            # same as above
+```
+
+---
