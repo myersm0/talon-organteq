@@ -176,7 +176,7 @@ organteq_sync :-
 	sync_couplers,
 	sync_mono_couplers,
 	sync_tremulants,
-	format("Synced with Organteq. Preset: ~w~n", [Preset]).
+	format(user_error, "Synced with Organteq. Preset: ~w~n", [Preset]).
 
 sync_all_manuals([]).
 sync_all_manuals([ManualNum-Names|Rest]) :-

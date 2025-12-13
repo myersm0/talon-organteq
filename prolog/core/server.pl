@@ -563,13 +563,12 @@ handle_query(Request) :-
 	catch(
 		(
 			read_term_from_atom(QueryStr, Goal, [variable_names(VarNames)]),
-			(call(Goal) ->
-				maplist(binding_to_json, VarNames, Bindings),
-				dict_create(BindingsDict, bindings, Bindings),
-				reply_json_dict(_{status: ok, success: true, bindings: BindingsDict})
-			;
-				reply_json_dict(_{status: ok, success: false})
-			)
+			findall(Bindings, (
+				call(Goal),
+				maplist(binding_to_json, VarNames, BindingPairs),
+				dict_create(Bindings, result, BindingPairs)
+			), Results),
+			reply_json_dict(_{status: ok, results: Results})
 		),
 		Error,
 		(
