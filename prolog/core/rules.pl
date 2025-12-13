@@ -24,9 +24,11 @@
 	do_disengage/2,
 	claim/3,
 	release/3,
+	is_owned/2,
 	still_owned_after_release/3,
 	get_rule_level/2,
 	set_rule_level/2,
+	division/1,
 	manuals/1,
 	all_divisions/1,
 	auxiliaries/1,
@@ -158,13 +160,10 @@ apply_rule(RuleId, _, _, _, Actions) :-
 	apply_predicate_rule(RuleId, Actions).
 
 apply_rule(RuleId, mute, _, _, Actions) :-
-	rule(RuleId, Type),
+	rule(RuleId, _),
+	get_rule_level(RuleId, Level),
 	rule_divisions(RuleId, Divisions),
-	(Type = persistent ->
-		apply_persistent_to_level(RuleId, 0, Divisions, Actions)
-	;   set_rule_level(RuleId, 0),
-		Actions = []
-	).
+	mute_impl(RuleId, Level, Divisions, Actions).
 
 apply_rule(RuleId, maximize, _, _, Actions) :-
 	current_preset(Preset),
@@ -344,19 +343,42 @@ execute_rule_action(toggle(Div, N), RPCAction) :-
 % Solo and reassert
 % ============================================================================
 
-solo_impl(RuleId, Level, Divisions, Actions) :-
-	findall(Div-Elements, (
-		member(Div, Divisions),
-		rule_elements_cumulative(RuleId, Level, Div, Elements)
-	), RulePairs),
+mute_impl(_, Level, _, []) :-
+	Level =< 0,
+	!.
+
+mute_impl(RuleId, Level, Divisions, Actions) :-
 	findall(Action, (
-		member(Div-RuleElements, RulePairs),
-		element(Div, N, _, _),
-		(member(N, RuleElements) ->
-			(do_engage(Div, N), make_rpc_action(Div, N, 1.0, Action))
-		;   (do_disengage(Div, N), make_rpc_action(Div, N, 0.0, Action))
-		)
+		member(Div, Divisions),
+		rule_elements_cumulative(RuleId, Level, Div, Elements),
+		member(N, Elements),
+		release(RuleId, Div, N),
+		\+ is_owned(Div, N),
+		do_disengage(Div, N),
+		make_rpc_action(Div, N, 0.0, Action)
 	), Actions).
+
+solo_impl(_, Level, _, []) :-
+	Level =< 0,
+	!.
+
+solo_impl(RuleId, Level, _, Actions) :-
+	findall(ClearAction, (
+		division(D),
+		element(D, N, _, _),
+		do_disengage(D, N),
+		make_rpc_action(D, N, 0.0, ClearAction)
+	), ClearActions),
+	forall((
+		rule(OtherId, _),
+		OtherId \= RuleId,
+		get_rule_level(OtherId, OtherLevel),
+		OtherLevel > 0,
+		rule_divisions(OtherId, OtherDivs)
+	), mute_impl(OtherId, OtherLevel, OtherDivs, _)),
+	rule_divisions(RuleId, Divisions),
+	reassert_impl(RuleId, Level, Divisions, ReassertActions),
+	append(ClearActions, ReassertActions, Actions).
 
 reassert_impl(RuleId, Level, Divisions, Actions) :-
 	findall(Action, (

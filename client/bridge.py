@@ -67,7 +67,9 @@ class Bridge:
 		return info
 
 	def apply_rule(self, rule_id, level=None, delta=None, action=None):
-		if action:
+		if action == "solo":
+			return self.run(f"solo_rule('{rule_id}')")
+		elif action:
 			return self.run(f"{action}('{rule_id}')")
 		elif level is not None:
 			return self.run(f"level('{rule_id}', {level})")
