@@ -124,7 +124,7 @@ app: /organteq/i
 
 
 # =============================================================================
-# Couplers
+# Auxiliaries
 # =============================================================================
 
 ^couple {user.organteq_stop_number}$:
@@ -142,6 +142,29 @@ app: /organteq/i
 ^decouple all$:
 	user.organteq_decouple_all()
 
+^tremulant {user.organteq_stop_number}$:
+	user.organteq_tremulant_on(organteq_stop_number)
+
+^cancel tremulant {user.organteq_stop_number}$:
+	user.organteq_tremulant_off(organteq_stop_number)
+
+^cancel tremulants$:
+	user.organteq_tremulant_off(1)
+	user.organteq_tremulant_off(2)
+	user.organteq_tremulant_off(3)
+	user.organteq_tremulant_off(4)
+
+^couple mono {user.organteq_stop_number}$:
+	user.organteq_mono_couple_index(organteq_stop_number)
+
+^decouple mono {user.organteq_stop_number}$:
+	user.organteq_mono_decouple_index(organteq_stop_number)
+
+^couple {user.organteq_mono_coupler}$:
+	user.organteq_mono_couple_name(organteq_mono_coupler)
+
+^decouple {user.organteq_mono_coupler}$:
+	user.organteq_mono_decouple_name(organteq_mono_coupler)
 
 # =============================================================================
 # Rules - level control

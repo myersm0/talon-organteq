@@ -58,3 +58,11 @@ ctx.lists["self.organteq_footage"] = {
 	"one foot": "1",
 }
 
+mod.list("organteq_mono_coupler", desc="Mono coupler names")
+ctx.lists["self.organteq_mono_coupler"] = {
+	"melody one": "melody 1",
+	"melody two": "melody 2",
+	"bass one": "bass 1",
+	"bass two": "bass 2",
+}
+

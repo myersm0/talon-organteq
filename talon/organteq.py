@@ -204,9 +204,8 @@ class Actions:
 		run_action("solo", manual, selector)
 
 	# =========================================================================
-	# Couplers
+	# Auxiliaries
 	# =========================================================================
-
 	def organteq_couple_index(index: int):
 		"""couple by index"""
 		get_bridge().run(f"couple_index({index})")
@@ -226,6 +225,30 @@ class Actions:
 	def organteq_decouple_all():
 		"""decouple all couplers"""
 		get_bridge().run("decouple_all")
+
+	def organteq_tremulant_on(index: int):
+		"""enable tremulant"""
+		get_bridge().run(f"tremulant({index}, on)")
+
+	def organteq_tremulant_off(index: int):
+		"""disable tremulant"""
+		get_bridge().run(f"tremulant({index}, off)")
+
+	def organteq_mono_couple_index(index: int):
+		"""engage mono coupler by index"""
+		get_bridge().run(f"mono_couple({index})")
+
+	def organteq_mono_decouple_index(index: int):
+		"""disengage mono coupler by index"""
+		get_bridge().run(f"mono_decouple({index})")
+
+	def organteq_mono_couple_name(name: str):
+		"""engage mono coupler by name"""
+		get_bridge().run(f"mono_couple('{name}')")
+
+	def organteq_mono_decouple_name(name: str):
+		"""disengage mono coupler by name"""
+		get_bridge().run(f"mono_decouple('{name}')")
 
 	# =========================================================================
 	# Rules
