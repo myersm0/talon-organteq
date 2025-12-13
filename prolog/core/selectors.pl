@@ -3,6 +3,7 @@
 :- module(selectors, [
 	resolve_selector/3,
 	dict_to_selector/2,
+	named_selector/1,
 	% Preset matching
 	preset_matches/2,
 	uses_for_preset/1,
@@ -46,6 +47,18 @@
 
 :- discontiguous resolve_selector/3.
 :- multifile resolve_selector/3.
+:- multifile named_selector/1.
+
+% ============================================================================
+% Named selectors (for Talon dynamic lists)
+% ============================================================================
+
+named_selector(all).
+named_selector(stops).
+named_selector(engaged).
+named_selector(disengaged).
+named_selector(couplers).
+named_selector(tremulants).
 
 % ============================================================================
 % Preset pattern matching

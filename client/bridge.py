@@ -79,3 +79,10 @@ class Bridge:
 		else:
 			return self.run(f"up('{rule_id}')")
 
+	def list_selectors(self):
+		r = self.query("selectors:named_selector(S)")
+		selectors = set()
+		for result in r.get("results", []):
+			if "S" in result:
+				selectors.add(result["S"])
+		return sorted(selectors)

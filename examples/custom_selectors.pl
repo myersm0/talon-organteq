@@ -7,24 +7,30 @@
 %   engage(great, evens).
 %   solo(swell, odds).
 %   engage(great, range(3, 8)).
-%   engage(swell, random_n(3)).
+%   engage(swell, random(3)).
 %
-% Compound selectors (built-in):
+% Compound selectors:
 %   engage(swell, intersection([range(1, 5), evens])).
 %   solo(great, union([odds, family(reed)])).
+%   engage(pedal, difference(engaged, family(mixture))).
+%
+% Note: Choose speakable names (no underscores) to use with Talon voice control.
 
 :- multifile selectors:resolve_selector/3.
+:- multifile selectors:named_selector/1.
 
 % ============================================================================
 % Positional selectors
 % ============================================================================
 
 % Even-numbered stops
+selectors:named_selector(evens).
 selectors:resolve_selector(Division, evens, Stops) :-
 	findall(N, (state:element(Division, N, _, stop), N mod 2 =:= 0), Unsorted),
 	sort(Unsorted, Stops).
 
 % Odd-numbered stops
+selectors:named_selector(odds).
 selectors:resolve_selector(Division, odds, Stops) :-
 	findall(N, (state:element(Division, N, _, stop), N mod 2 =:= 1), Unsorted),
 	sort(Unsorted, Stops).
@@ -38,19 +44,19 @@ selectors:resolve_selector(Division, range(Low, High), Stops) :-
 	sort(Unsorted, Stops).
 
 % First N stops (by number)
-selectors:resolve_selector(Division, first_n(N), Stops) :-
+selectors:resolve_selector(Division, first(N), Stops) :-
 	findall(Num, state:element(Division, Num, _, stop), All),
 	sort(All, Sorted),
 	helpers:take_first(Sorted, N, Stops).
 
 % Last N stops (by number)
-selectors:resolve_selector(Division, last_n(N), Stops) :-
+selectors:resolve_selector(Division, last(N), Stops) :-
 	findall(Num, state:element(Division, Num, _, stop), All),
 	sort(All, Sorted),
 	helpers:take_last(Sorted, N, Stops).
 
 % Random N stops from division
-selectors:resolve_selector(Division, random_n(N), Stops) :-
+selectors:resolve_selector(Division, random(N), Stops) :-
 	findall(Num, state:element(Division, Num, _, stop), All),
 	random_permutation(All, Shuffled),
 	helpers:take_first(Shuffled, N, Unsorted),
@@ -61,6 +67,7 @@ selectors:resolve_selector(Division, random_n(N), Stops) :-
 % ============================================================================
 
 % Complement of currently engaged (everything that's off)
+selectors:named_selector(complement).
 selectors:resolve_selector(Division, complement, Stops) :-
 	findall(N, (
 		state:element(Division, N, _, stop),
@@ -69,6 +76,7 @@ selectors:resolve_selector(Division, complement, Stops) :-
 	sort(Unsorted, Stops).
 
 % Stops not owned by any active rule
+selectors:named_selector(unowned).
 selectors:resolve_selector(Division, unowned, Stops) :-
 	findall(N, (
 		state:element(Division, N, _, stop),
@@ -77,6 +85,7 @@ selectors:resolve_selector(Division, unowned, Stops) :-
 	sort(Unsorted, Stops).
 
 % Stops that ARE owned by some rule
+selectors:named_selector(owned).
 selectors:resolve_selector(Division, owned, Stops) :-
 	findall(N, (
 		state:element(Division, N, _, stop),
