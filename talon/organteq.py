@@ -1,12 +1,18 @@
 """
-organteq.py - Talon actions for Organteq control
+organteq.py - Talon actions for Organteq registration control
 
-Uses minimal Python bridge which POSTs command strings to Prolog.
-All registration logic is in Prolog.
+All registration logic is in Prolog. This module provides:
+- Bridge initialization and management
+- Actions for voice commands
+- Regular lists (rules, selectors, transients) updated on sync
 """
 
-from talon import Module
+from talon import Module, Context, imgui, actions
 from ..client.bridge import Bridge
+
+mod = Module()
+ctx = Context()
+ctx.matches = "app: /organteq/i"
 
 bridge = None
 current_manual = "great"
@@ -18,17 +24,95 @@ def get_bridge():
 		try:
 			bridge = Bridge()
 			bridge.sync()
+			update_lists()
 		except Exception as e:
-			print(f"Failed to initialize bridge: {e}")
+			print(f"talon-organteq: Failed to initialize bridge: {e}")
 			bridge = None
 	return bridge
 
 
-mod = Module()
+mod.list("organteq_rule", desc="Available rules (populated on sync)")
+mod.list("organteq_selector", desc="Named selectors (populated on sync)")
+mod.list("organteq_transient", desc="Transient rules (populated on sync)")
+
+
+def update_lists():
+	b = get_bridge()
+	if not b:
+		return
+	try:
+		rules = b.list_rules()
+		ctx.lists["user.organteq_rule"] = {r: r for r in rules}
+		ctx.lists["user.organteq_selector"] = {s: s for s in b.list_selectors()}
+		transients = {}
+		for r in rules:
+			info = b.get_rule_info(r)
+			if info and info.get("type") == "transient":
+				transients[r] = r
+		ctx.lists["user.organteq_transient"] = transients
+	except Exception as e:
+		print(f"talon-organteq: Failed to update lists: {e}")
+
+
+def run_action(action: str, manual: str, selector: str):
+	get_bridge().run(f"{action}({manual}, {selector})")
+
+
+@imgui.open()
+def gui_help(gui: imgui.GUI):
+	gui.text("talon-organteq")
+	gui.line()
+	try:
+		b = get_bridge()
+		preset = b.get_preset()
+		gui.text(f"Preset: {preset or '(none)'}")
+		gui.spacer()
+
+		selectors = b.list_selectors()
+		if selectors:
+			gui.text("Selectors:")
+			gui.text(f"  {', '.join(selectors)}")
+			gui.spacer()
+
+		rules = b.list_rules()
+		if rules:
+			transients = []
+			persistents = []
+			for rule in sorted(rules):
+				info = b.get_rule_info(rule, preset)
+				if info:
+					if info.get("type") == "transient":
+						transients.append(rule)
+					else:
+						persistents.append((rule, info))
+
+			if transients:
+				gui.text("Transient Rules:")
+				gui.text(f"  {', '.join(transients)}")
+				gui.spacer()
+
+			if persistents:
+				gui.text("Persistent Rules:")
+				for rule, info in persistents:
+					level = info.get("current_level", 0)
+					max_level = info.get("max_level", "?")
+					gui.text(f"  {rule}: {level}/{max_level}")
+		else:
+			gui.text("(no rules loaded)")
+	except Exception as e:
+		gui.text(f"Error: {e}")
+	gui.spacer()
+	if gui.button("Close"):
+		actions.user.organteq_hide_help()
 
 
 @mod.action_class
 class Actions:
+
+	# =========================================================================
+	# Bridge and context
+	# =========================================================================
+
 	def organteq_get_bridge():
 		"""get the shared bridge instance"""
 		return get_bridge()
@@ -42,69 +126,86 @@ class Actions:
 		"""get the current manual context"""
 		return current_manual
 
+	def organteq_sync():
+		"""sync state with Organteq and update voice command lists"""
+		get_bridge().sync()
+		update_lists()
+
+	# =========================================================================
+	# Stop control by number
+	# =========================================================================
+
 	def organteq_engage(manual: str, stops: list[str]):
 		"""engage stops by number"""
 		nums = ", ".join(stops)
-		get_bridge().run(f"engage({manual}, numbers([{nums}]))")
+		run_action("engage", manual, f"numbers([{nums}])")
 
 	def organteq_disengage(manual: str, stops: list[str]):
 		"""disengage stops by number"""
 		nums = ", ".join(stops)
-		get_bridge().run(f"disengage({manual}, numbers([{nums}]))")
+		run_action("disengage", manual, f"numbers([{nums}])")
 
 	def organteq_toggle(manual: str, stops: list[str]):
 		"""toggle stops by number"""
 		nums = ", ".join(stops)
-		get_bridge().run(f"toggle({manual}, numbers([{nums}]))")
+		run_action("toggle", manual, f"numbers([{nums}])")
 
 	def organteq_solo(manual: str, stops: list[str]):
 		"""solo stops by number"""
 		nums = ", ".join(stops)
-		get_bridge().run(f"solo({manual}, numbers([{nums}]))")
+		run_action("solo", manual, f"numbers([{nums}])")
 
 	def organteq_clear(manual: str):
 		"""clear all stops on a manual"""
 		get_bridge().run(f"clear({manual})")
 
+	# =========================================================================
+	# Stop control by family
+	# =========================================================================
+
 	def organteq_engage_family(manual: str, family: str, footage: str = ""):
 		"""engage stops by family and optional footage"""
-		if footage:
-			get_bridge().run(f"engage({manual}, family({family}, {footage}))")
-		else:
-			get_bridge().run(f"engage({manual}, family({family}))")
+		sel = f"family({family}, {footage})" if footage else f"family({family})"
+		run_action("engage", manual, sel)
 
 	def organteq_disengage_family(manual: str, family: str, footage: str = ""):
 		"""disengage stops by family and optional footage"""
-		if footage:
-			get_bridge().run(f"disengage({manual}, family({family}, {footage}))")
-		else:
-			get_bridge().run(f"disengage({manual}, family({family}))")
+		sel = f"family({family}, {footage})" if footage else f"family({family})"
+		run_action("disengage", manual, sel)
 
 	def organteq_toggle_family(manual: str, family: str, footage: str = ""):
 		"""toggle stops by family and optional footage"""
-		if footage:
-			get_bridge().run(f"toggle({manual}, family({family}, {footage}))")
-		else:
-			get_bridge().run(f"toggle({manual}, family({family}))")
+		sel = f"family({family}, {footage})" if footage else f"family({family})"
+		run_action("toggle", manual, sel)
 
 	def organteq_solo_family(manual: str, family: str, footage: str = ""):
 		"""solo stops by family and optional footage"""
-		if footage:
-			get_bridge().run(f"solo({manual}, family({family}, {footage}))")
-		else:
-			get_bridge().run(f"solo({manual}, family({family}))")
+		sel = f"family({family}, {footage})" if footage else f"family({family})"
+		run_action("solo", manual, sel)
 
-	def organteq_undo():
-		"""undo last operation"""
-		get_bridge().run("undo")
+	# =========================================================================
+	# Stop control by named selector
+	# =========================================================================
 
-	def organteq_redo():
-		"""redo last undone operation"""
-		get_bridge().run("redo")
+	def organteq_engage_selector(manual: str, selector: str):
+		"""engage stops by named selector"""
+		run_action("engage", manual, selector)
 
-	def organteq_sync():
-		"""sync engine state with Organteq"""
-		get_bridge().sync()
+	def organteq_disengage_selector(manual: str, selector: str):
+		"""disengage stops by named selector"""
+		run_action("disengage", manual, selector)
+
+	def organteq_toggle_selector(manual: str, selector: str):
+		"""toggle stops by named selector"""
+		run_action("toggle", manual, selector)
+
+	def organteq_solo_selector(manual: str, selector: str):
+		"""solo stops by named selector"""
+		run_action("solo", manual, selector)
+
+	# =========================================================================
+	# Couplers
+	# =========================================================================
 
 	def organteq_couple_index(index: int):
 		"""couple by index"""
@@ -114,34 +215,6 @@ class Actions:
 		"""decouple by index"""
 		get_bridge().run(f"decouple_index({index})")
 
-	def organteq_decouple_all():
-		"""decouple all couplers"""
-		get_bridge().run("decouple_all")
-
-	def organteq_rule_up(rule_id: str):
-		"""increment rule level"""
-		get_bridge().run(f"up('{rule_id}')")
-
-	def organteq_rule_down(rule_id: str):
-		"""decrement rule level"""
-		get_bridge().run(f"down('{rule_id}')")
-
-	def organteq_rule_level(rule_id: str, level: int):
-		"""set rule level"""
-		get_bridge().run(f"level('{rule_id}', {level})")
-
-	def organteq_rule_mute(rule_id: str):
-		"""mute rule (level 0)"""
-		get_bridge().run(f"mute('{rule_id}')")
-
-	def organteq_rule_maximize(rule_id: str):
-		"""maximize rule level"""
-		get_bridge().run(f"maximize('{rule_id}')")
-
-	def organteq_execute(command: str):
-		"""execute arbitrary command string"""
-		get_bridge().run(command)
-
 	def organteq_couple_manuals(source: str, destination: str):
 		"""couple two manuals"""
 		get_bridge().run(f"couple({source}, {destination})")
@@ -150,3 +223,95 @@ class Actions:
 		"""decouple two manuals"""
 		get_bridge().run(f"decouple({source}, {destination})")
 
+	def organteq_decouple_all():
+		"""decouple all couplers"""
+		get_bridge().run("decouple_all")
+
+	# =========================================================================
+	# Rules
+	# =========================================================================
+
+	def organteq_rule_up(rules: list[str]):
+		"""increment level for rules"""
+		b = get_bridge()
+		for rule in rules:
+			b.apply_rule(rule, delta=1)
+
+	def organteq_rule_down(rules: list[str]):
+		"""decrement level for rules"""
+		b = get_bridge()
+		for rule in rules:
+			b.apply_rule(rule, delta=-1)
+
+	def organteq_rule_set_level(rule: str, level: int):
+		"""set a rule to a specific level"""
+		get_bridge().apply_rule(rule, level=level)
+
+	def organteq_rule_maximize(rules: list[str]):
+		"""set rules to maximum level"""
+		b = get_bridge()
+		for rule in rules:
+			b.apply_rule(rule, action="maximize")
+
+	def organteq_rule_minimize(rules: list[str]):
+		"""set rules to minimum level"""
+		b = get_bridge()
+		for rule in rules:
+			b.apply_rule(rule, action="minimize")
+
+	def organteq_rule_mute(rules: list[str]):
+		"""set rules to level 0"""
+		b = get_bridge()
+		for rule in rules:
+			b.apply_rule(rule, action="mute")
+
+	def organteq_rule_solo(rule: str):
+		"""solo a single rule"""
+		get_bridge().apply_rule(rule, action="solo")
+
+	def organteq_rule_reassert(rule: str):
+		"""reassert a single rule"""
+		get_bridge().apply_rule(rule, action="reassert")
+
+	def organteq_transient(rule: str):
+		"""apply a transient rule (increment by 1)"""
+		get_bridge().apply_rule(rule, delta=1)
+
+	# =========================================================================
+	# Undo/redo
+	# =========================================================================
+
+	def organteq_undo():
+		"""undo last operation"""
+		get_bridge().run("undo")
+
+	def organteq_redo():
+		"""redo last undone operation"""
+		get_bridge().run("redo")
+
+	# =========================================================================
+	# GUI
+	# =========================================================================
+
+	def organteq_show_help():
+		"""show the help overlay"""
+		gui_help.show()
+
+	def organteq_hide_help():
+		"""hide the help overlay"""
+		gui_help.hide()
+
+	def organteq_toggle_help():
+		"""toggle the help overlay"""
+		if gui_help.showing:
+			gui_help.hide()
+		else:
+			gui_help.show()
+
+	# =========================================================================
+	# Advanced
+	# =========================================================================
+
+	def organteq_execute(command: str):
+		"""execute arbitrary command string"""
+		get_bridge().run(command)

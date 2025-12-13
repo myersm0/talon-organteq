@@ -43,13 +43,15 @@ class Bridge:
 				rules.add(result["R"])
 		return sorted(rules)
 
-	def get_rule_info(self, rule_id):
+	def get_rule_info(self, rule_id, preset=None):
 		r = self.query(f"state:rule('{rule_id}', Type)")
 		if not r.get("results"):
 			return None
 		rule_type = r["results"][0].get("Type")
 		info = {"rule": rule_id, "type": rule_type}
-		r = self.query(f"selectors:computed_max_level('{rule_id}', _, Max)")
+		if preset is None:
+			preset = self.get_preset() or "unknown"
+		r = self.query(f"selectors:computed_max_level('{rule_id}', '{preset}', Max)")
 		if r.get("results"):
 			info["max_level"] = r["results"][0].get("Max", 1)
 		else:
