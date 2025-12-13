@@ -1,13 +1,13 @@
 """
-Demo for how to map MIDI faders to rule levels
+Demo: Map MIDI faders to rule levels
 
 Requires: pip install mido python-rtmidi
 
 Usage:
     python midi_controller_demo.py
 
-Listens for MIDI CC messages from an Arturia KeyLab mk3 keyboard. 
-You would need to adapt this for your specific MIDI device.
+Listens for MIDI CC messages and maps fader positions to rule levels.
+Adapt the fader_rules mapping for your specific MIDI controller.
 """
 
 if __name__ == "__main__":
@@ -21,10 +21,10 @@ if __name__ == "__main__":
 	from client.bridge import Bridge
 
 	fader_channel = 2
-	preset_check_interval = 2.0
+	preset_check_interval = 5.0
 
-	# numbers 73, 75, 79, 72 are the MIDI CC message codes that correspond to 
-	# the messages transmitted by the first four faders on my KeyLab, in order
+	# Map MIDI CC numbers to rule IDs
+	# These CC numbers are for Arturia KeyLab mk3 faders; adapt for your controller
 	fader_rules = {
 		73: "crescendo pedal",
 		75: "crescendo choir",
@@ -33,26 +33,44 @@ if __name__ == "__main__":
 	}
 
 	bridge = None
+	max_levels = {}
 
-	def cc_to_level(cc_value: int, max_level: int) -> int:
+	def get_max_level(rule_id):
+		if rule_id in max_levels:
+			return max_levels[rule_id]
+		result = bridge.run(f"get_rule_info('{rule_id}')")
+		if result.get("status") == "ok":
+			max_level = result.get("state", {}).get("max_level", 1)
+			max_levels[rule_id] = max_level
+			return max_level
+		return 1
+
+	def cc_to_level(cc_value, max_level):
 		zone_size = 128 / (max_level + 1)
 		return min(int(cc_value / zone_size), max_level)
 
-	def handle_cc(cc_number: int, value: int):
+	def handle_cc(cc_number, value):
 		rule_id = fader_rules.get(cc_number)
 		if not rule_id:
 			return
-		max_level = bridge.get_max_level(rule_id)
+		max_level = get_max_level(rule_id)
 		level = cc_to_level(value, max_level)
-		print(f"Fader CC{cc_number} = {value} → {rule_id} level {level}")
-		bridge.apply_rule(rule_id, level=level)
+		print(f"Fader CC{cc_number} = {value} → '{rule_id}' level {level}")
+		bridge.run(f"level('{rule_id}', {level})")
 
 	def preset_check_loop():
+		last_preset = None
 		while True:
 			time.sleep(preset_check_interval)
 			try:
-				if bridge.check_and_sync():
-					print(f"Preset changed, re-synced to: {bridge.get_preset()}")
+				result = bridge.state()
+				if result.get("status") == "ok":
+					current = result.get("state", {}).get("preset", "")
+					if last_preset and current != last_preset:
+						print(f"Preset changed to: {current}")
+						bridge.sync()
+						max_levels.clear()
+					last_preset = current
 			except Exception as e:
 				print(f"Preset check error: {e}")
 
@@ -69,11 +87,14 @@ if __name__ == "__main__":
 
 		bridge = Bridge()
 		bridge.sync()
-		print(f"Bridge connected and synced to preset: {bridge.get_preset()}")
+
+		result = bridge.state()
+		preset = result.get("state", {}).get("preset", "unknown")
+		print(f"Connected. Preset: {preset}")
 
 		preset_thread = threading.Thread(target=preset_check_loop, daemon=True)
 		preset_thread.start()
-		print(f"Preset change detection active (checking every {preset_check_interval}s)")
+		print(f"Preset change detection active (every {preset_check_interval}s)")
 
 		input_name = None
 		for name in mido.get_input_names():
@@ -82,12 +103,12 @@ if __name__ == "__main__":
 				break
 
 		if not input_name:
-			print("Could not find KeyLab MIDI input. Available inputs listed above.")
+			print("No compatible MIDI input found. See available inputs above.")
 			return
 
 		print(f"Opening MIDI input: {input_name}")
 		print(f"Fader mappings: {fader_rules}")
-		print("Listening for MIDI messages... (Ctrl+C to quit)")
+		print("Listening... (Ctrl+C to quit)")
 
 		with mido.open_input(input_name) as port:
 			for msg in port:
@@ -95,4 +116,3 @@ if __name__ == "__main__":
 					handle_cc(msg.control, msg.value)
 
 	main()
-
